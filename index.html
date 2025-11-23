@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SULE WORKSTATION BOX</title>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* --- CSS Variables for Mint Chocolate Theme --- */
+        :root {
+            --choco-dark: #3E2723;   /* Deep Chocolate */
+            --choco-light: #5D4037;  /* Lighter Chocolate */
+            --mint-main: #80CBC4;    /* Main Mint */
+            --mint-bright: #A7FFEB;  /* Bright Mint for highlights */
+            --mint-glow: rgba(167, 255, 235, 0.6);
+            --text-color: #3E2723;
+        }
+
+        /* --- Global Reset & Layout --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden; /* Prevent scrolling if possible to keep it app-like */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            
+            /* Background Configuration */
+            background-image: url('W_city.jpg'); 
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            
+            /* Fallback color in case image doesn't load immediately */
+            background-color: var(--mint-main);
+        }
+
+        /* --- Title Styling --- */
+        header {
+            margin-bottom: 40px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 900;
+            color: var(--choco-dark);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            
+            /* Mint Outline/Shadow Effect for visibility */
+            text-shadow: 
+                -2px -2px 0 var(--mint-bright),  
+                 2px -2px 0 var(--mint-bright),
+                -2px  2px 0 var(--mint-bright),
+                 2px  2px 0 var(--mint-bright),
+                 4px  4px 10px rgba(0,0,0,0.3);
+            
+            transition: transform 0.3s ease;
+        }
+
+        h1:hover {
+            transform: scale(1.02);
+        }
+
+        /* --- Grid Container --- */
+        .app-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 40px; /* Space between icons */
+            padding: 20px;
+            z-index: 10;
+            
+            /* Optional: faint backdrop to help icons pop slightly without obscuring city */
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(2px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* --- Icon Button Styling --- */
+        .app-link {
+            position: relative; /* For tooltip positioning */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-decoration: none;
+            width: 80px;  /* Spec: 60px - 80px */
+            height: 80px;
+            
+            /* Card Style */
+            background-color: var(--choco-dark);
+            border-radius: 16px;
+            border: 2px solid var(--choco-light);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* Icon Graphic */
+        .app-link i {
+            font-size: 32px;
+            color: var(--mint-main);
+            transition: color 0.3s ease;
+        }
+
+        /* Hover Effects on Button */
+        .app-link:hover {
+            transform: translateY(-5px) scale(1.1);
+            background-color: var(--choco-light);
+            border-color: var(--mint-bright);
+            box-shadow: 0 10px 20px rgba(62, 39, 35, 0.5), 0 0 15px var(--mint-glow);
+        }
+
+        .app-link:hover i {
+            color: var(--mint-bright);
+        }
+
+        /* Active/Click Effect */
+        .app-link:active {
+            transform: translateY(0) scale(0.95);
+        }
+
+        /* --- Tooltip Styling --- */
+        .tooltip {
+            position: absolute;
+            bottom: -40px; /* Position below the icon */
+            left: 50%;
+            transform: translateX(-50%) translateY(10px);
+            
+            background-color: var(--mint-bright);
+            color: var(--choco-dark);
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            white-space: nowrap;
+            pointer-events: none; /* Let clicks pass through */
+            
+            /* Border for cute look */
+            border: 2px solid var(--choco-dark);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            
+            /* Animation States */
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s;
+        }
+
+        /* Tiny triangle for tooltip */
+        .tooltip::before {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 0 6px 6px 6px;
+            border-style: solid;
+            border-color: transparent transparent var(--choco-dark) transparent;
+        }
+        
+        /* Inner triangle for color match */
+        .tooltip::after {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 0 4px 4px 4px;
+            border-style: solid;
+            border-color: transparent transparent var(--mint-bright) transparent;
+        }
+
+        /* Show Tooltip on Hover */
+        .app-link:hover .tooltip {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* --- Mobile Responsiveness --- */
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 2rem;
+                margin-bottom: 20px;
+                padding: 0 10px;
+            }
+
+            .app-grid {
+                grid-template-columns: repeat(2, 1fr); /* 2 columns on mobile */
+                gap: 30px;
+            }
+        }
+        
+        /* Very small screens */
+        @media (max-width: 350px) {
+             .app-grid {
+                gap: 20px;
+            }
+            h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header / Title -->
+    <header>
+        <h1>Sule Workstation Box</h1>
+    </header>
+
+    <!-- Main Navigation Grid -->
+    <main class="app-grid">
+        
+        <!-- 1. Translator -->
+        <a href="translator.html" class="app-link" target="_blank" aria-label="Translator">
+            <i class="fa-solid fa-language"></i> <!-- Globe/Translate Icon -->
+            <div class="tooltip">Translator</div>
+        </a>
+
+        <!-- 2. Unit Converter -->
+        <a href="unitconverter.html" class="app-link" target="_blank" aria-label="Unit Converter">
+            <i class="fa-solid fa-scale-balanced"></i> <!-- Scale/Balance Icon -->
+            <div class="tooltip">Unit Converter</div>
+        </a>
+
+        <!-- 3. Calculator -->
+        <a href="calculator.html" class="app-link" target="_blank" aria-label="Calculator">
+            <i class="fa-solid fa-calculator"></i> <!-- Calculator Icon -->
+            <div class="tooltip">Calculator</div>
+        </a>
+
+        <!-- 4. Weather -->
+        <a href="weather.html" class="app-link" target="_blank" aria-label="Weather">
+            <i class="fa-solid fa-cloud-sun"></i> <!-- Sun & Cloud Icon -->
+            <div class="tooltip">Weather</div>
+        </a>
+
+        <!-- 5. Coming Soon -->
+        <a href="#" class="app-link" target="_blank" aria-label="Coming Soon">
+            <i class="fa-solid fa-lock"></i> <!-- Lock Icon -->
+            <div class="tooltip">Coming Soon</div>
+        </a>
+
+        <!-- 6. Coming Soon -->
+        <a href="#" class="app-link" target="_blank" aria-label="Coming Soon">
+            <i class="fa-solid fa-lock"></i> <!-- Lock Icon -->
+            <div class="tooltip">Coming Soon</div>
+        </a>
+
+    </main>
+
+</body>
+</html>
