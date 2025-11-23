@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
     // 1. Retrieve the API Key from environment variables
     // Make sure to add OPENWEATHER_API_KEY in your Vercel Project Settings
-    const apiKey = process.env.OPENWEATHER_API_KEY;
+    const apiKey = process.env.24660a77f576b961d854459d7479030b;
     
     if (!apiKey) {
         return res.status(500).json({ error: 'Server Error: API Key is missing.' });
