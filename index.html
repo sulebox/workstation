@@ -44,11 +44,30 @@
             background-color: var(--mint-main);
         }
 
+        /* --- Night Overlay (New Feature) --- */
+        #night-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6); /* 半透明の黒フィルター */
+            opacity: 0; /* 初期状態は透明 */
+            pointer-events: none; /* クリックを透過させる */
+            z-index: 5; /* 背景(body)より上、コンテンツ(z-index:10)より下に配置 */
+            transition: opacity 2s ease; /* 2秒かけてじわっと変化 */
+        }
+
+        /* 夜モード時のスタイル */
+        body.is-night #night-overlay {
+            opacity: 1;
+        }
+
         /* --- Title Styling --- */
         header {
             margin-bottom: 40px;
             text-align: center;
-            z-index: 10;
+            z-index: 10; /* オーバーレイより手前に表示 */
         }
 
         h1 {
@@ -79,7 +98,7 @@
             grid-template-columns: repeat(3, 1fr);
             gap: 40px; /* Space between icons */
             padding: 20px;
-            z-index: 10;
+            z-index: 10; /* オーバーレイより手前に表示 */
             
             /* Optional: faint backdrop to help icons pop slightly without obscuring city */
             background: rgba(255, 255, 255, 0.1);
@@ -214,6 +233,9 @@
     </style>
 </head>
 <body>
+    
+    <!-- 夜間フィルター用オーバーレイ -->
+    <div id="night-overlay"></div>
 
     <!-- Header / Title -->
     <header>
@@ -261,5 +283,31 @@
 
     </main>
 
+    <!-- JavaScript for Night Mode -->
+    <script>
+        function checkNightTime() {
+            const now = new Date();
+            const hour = now.getHours();
+            
+            // 18:00 (18) から 翌6:00 (6) までを夜とする
+            // hour >= 18 (18時以降) または hour < 6 (深夜0時〜早朝6時前)
+            const isNight = hour >= 18 || hour < 6;
+            
+            if (isNight) {
+                document.body.classList.add('is-night');
+                // コンソール確認用（開発時のみ）
+                // console.log("Night mode: ON (Current hour: " + hour + ")");
+            } else {
+                document.body.classList.remove('is-night');
+                // console.log("Night mode: OFF (Current hour: " + hour + ")");
+            }
+        }
+
+        // ページ読み込み時に即実行
+        checkNightTime();
+
+        // その後、1分ごとにチェック (60000ms)
+        setInterval(checkNightTime, 60000);
+    </script>
 </body>
 </html>
