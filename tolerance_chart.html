@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>はめ合い公差 ＆ ネジ下穴径 一覧ツール</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel (for JSX) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body {
+            background-color: #E0F7FA;
+            color: #3E2723;
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #E0F7FA; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #B2EBF2; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #26C6DA; 
+        }
+    </style>
+</head>
+<body>
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo } = React;
+
+        // --- Icon Components (SVG) ---
+        // Replacing lucide-react dependencies with inline SVGs for portability
+        
+        const SettingsIcon = ({ size = 24, className = "", style = {} }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.39a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+        );
+
+        const RulerIcon = ({ size = 24, className = "", style = {} }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0l12.6 12.6z"></path><line x1="13" y1="7" x2="14" y2="8"></line><line x1="9" y1="11" x2="10" y2="12"></line><line x1="5" y1="15" x2="6" y2="16"></line><line x1="17" y1="3" x2="18" y2="4"></line></svg>
+        );
+
+        const InfoIcon = ({ size = 24, className = "", style = {} }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        );
+
+        const CalculatorIcon = ({ size = 24, className = "", style = {} }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="16" y1="14" x2="16" y2="18"></line><path d="M16 10h.01"></path><path d="M12 10h.01"></path><path d="M8 10h.01"></path><path d="M12 14h.01"></path><path d="M8 14h.01"></path><path d="M12 18h.01"></path><path d="M8 18h.01"></path></svg>
+        );
+
+        const ArrowRightLeftIcon = ({ size = 24, className = "", style = {} }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}><path d="m16 21 3-3-3-3"></path><path d="M22 2H2a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2ZM2 11h20"></path><path d="m8 3-3 3 3 3"></path><path d="M22 2H2"></path><rect x="0" y="0" width="24" height="24" fill="none" stroke="none" /></svg> // Simplified fallback
+        );
+        // Correct ArrowRightLeft path
+        const SwapIcon = ({ size = 24, className = "", style = {} }) => (
+             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}><path d="m16 3 4 4-4 4"></path><path d="M20 7H4"></path><path d="m8 21-4-4 4-4"></path><path d="M4 17h16"></path></svg>
+        );
+
+
+        const ChevronDownIcon = ({ size = 24, className = "", style = {} }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}><polyline points="6 9 12 15 18 9"></polyline></svg>
+        );
+
+
+        // --- Data Definitions ---
+
+        // Screw Thread Data (ISO Metric Coarse)
+        const screwHoleData = [
+          { label: 'M1', pitch: 0.25, hole: 0.75 },
+          { label: 'M1.1', pitch: 0.25, hole: 0.85 },
+          { label: 'M1.2', pitch: 0.25, hole: 0.95 },
+          { label: 'M1.4', pitch: 0.3, hole: 1.10 },
+          { label: 'M1.6', pitch: 0.35, hole: 1.25 },
+          { label: 'M1.8', pitch: 0.35, hole: 1.45 },
+          { label: 'M2', pitch: 0.4, hole: 1.60 },
+          { label: 'M2.2', pitch: 0.45, hole: 1.75 },
+          { label: 'M2.5', pitch: 0.45, hole: 2.05 },
+          { label: 'M3', pitch: 0.5, hole: 2.50 },
+          { label: 'M3.5', pitch: 0.6, hole: 2.90 },
+          { label: 'M4', pitch: 0.7, hole: 3.30 },
+          { label: 'M4.5', pitch: 0.75, hole: 3.70 },
+          { label: 'M5', pitch: 0.8, hole: 4.20 },
+          { label: 'M6', pitch: 1.0, hole: 5.00 },
+          { label: 'M7', pitch: 1.0, hole: 6.00 },
+          { label: 'M8', pitch: 1.25, hole: 6.80 },
+          { label: 'M9', pitch: 1.25, hole: 7.80 },
+          { label: 'M10', pitch: 1.5, hole: 8.50 },
+          { label: 'M11', pitch: 1.5, hole: 9.50 },
+          { label: 'M12', pitch: 1.75, hole: 10.20 },
+        ];
+
+        // Tolerance Data (JIS B 0401)
+        const rangeKeys = [
+          { max: 3, key: '0-3' },
+          { max: 6, key: '3-6' },
+          { max: 10, key: '6-10' },
+          { max: 14, key: '10-14' },
+          { max: 18, key: '14-18' },
+          { max: 24, key: '18-24' },
+          { max: 30, key: '24-30' },
+        ];
+
+        const t = (v1, v2, v3, v4, v5) => ({
+          '0-3': v1, '3-6': v2, '6-10': v3, '10-14': v4, '14-18': v4, '18-24': v5, '24-30': v5
+        });
+
+        const holeToleranceData = {
+          'B10': t([180, 140], [188, 140], [208, 150], [220, 150], [244, 160]),
+          'C9':  t([85, 60],   [100, 70],  [116, 80],  [138, 95],  [162, 110]),
+          'C10': t([100, 60],  [118, 70],  [138, 80],  [165, 95],  [194, 110]),
+          'D8':  t([34, 20],   [48, 30],   [62, 40],   [77, 50],   [98, 65]),
+          'D9':  t([45, 20],   [60, 30],   [76, 40],   [93, 50],   [117, 65]),
+          'D10': t([60, 20],   [78, 30],   [98, 40],   [120, 50],  [149, 65]),
+          'E7':  t([24, 14],   [32, 20],   [40, 25],   [50, 32],   [61, 40]),
+          'E8':  t([28, 14],   [38, 20],   [47, 25],   [59, 32],   [73, 40]),
+          'E9':  t([39, 14],   [50, 20],   [61, 25],   [75, 32],   [92, 40]),
+          'F6':  t([12, 6],    [18, 10],   [22, 13],   [27, 16],   [33, 20]),
+          'F7':  t([16, 6],    [22, 10],   [28, 13],   [34, 16],   [41, 20]),
+          'F8':  t([20, 6],    [28, 10],   [35, 13],   [43, 16],   [53, 20]),
+          'G6':  t([8, 2],     [12, 4],    [14, 5],    [17, 6],    [20, 7]),
+          'G7':  t([12, 2],    [16, 4],    [20, 5],    [24, 6],    [28, 7]),
+          'H6':  t([6, 0],     [8, 0],     [9, 0],     [11, 0],    [13, 0]),
+          'H7':  t([10, 0],    [12, 0],    [15, 0],    [18, 0],    [21, 0]),
+          'H8':  t([14, 0],    [18, 0],    [22, 0],    [27, 0],    [33, 0]),
+          'H9':  t([25, 0],    [30, 0],    [36, 0],    [43, 0],    [52, 0]),
+          'H10': t([40, 0],    [48, 0],    [58, 0],    [70, 0],    [84, 0]),
+          'JS6': t([3, -3],    [4, -4],    [4.5, -4.5],[5.5, -5.5],[6.5, -6.5]),
+          'JS7': t([5, -5],    [6, -6],    [7.5, -7.5],[9, -9],    [10.5, -10.5]),
+          'K6':  t([0, -6],    [2, -6],    [2, -7],    [2, -9],    [2, -11]),
+          'K7':  t([0, -10],   [3, -9],    [5, -10],   [6, -12],   [6, -15]),
+          'M6':  t([-2, -8],   [-1, -9],   [-3, -12],  [-4, -15],  [-4, -17]),
+          'M7':  t([-2, -12],  [0, -12],   [0, -15],   [0, -18],   [0, -21]),
+          'N6':  t([-4, -10],  [-5, -13],  [-7, -16],  [-9, -20],  [-11, -24]),
+          'N7':  t([-4, -14],  [-4, -16],  [-4, -19],  [-5, -23],  [-7, -28]),
+          'P6':  t([-6, -12],  [-9, -17],  [-12, -21], [-15, -26], [-18, -31]),
+          'P7':  t([-6, -16],  [-8, -20],  [-9, -24],  [-11, -29], [-14, -35]),
+          'R7':  t([-10, -20], [-11, -23], [-13, -28], [-16, -34], [-20, -41]),
+          'S7':  t([-14, -24], [-15, -27], [-17, -32], [-21, -39], [-27, -48]),
+          'T7':  t([null, null],[-19, -31],[-22, -37], [-26, -44], [-33, -54]), 
+          'U7':  t([-18, -28], [-24, -36], [-28, -43], [-33, -51], [-40, -61]),
+          'X7':  t([-20, -30], [-28, -40], [-34, -49], [-40, -58], [-54, -75]),
+        };
+
+        const shaftToleranceData = {
+          'b9':  t([-140, -165], [-140, -170], [-150, -186], [-150, -193], [-160, -212]),
+          'c9':  t([-60, -85],   [-70, -100],  [-80, -116],  [-95, -138],  [-110, -162]),
+          'd8':  t([-20, -34],   [-30, -48],   [-40, -62],   [-50, -77],   [-65, -98]),
+          'd9':  t([-20, -45],   [-30, -60],   [-40, -76],   [-50, -93],   [-65, -117]),
+          'e7':  t([-14, -24],   [-20, -32],   [-25, -40],   [-32, -50],   [-40, -61]),
+          'e8':  t([-14, -28],   [-20, -38],   [-25, -47],   [-32, -59],   [-40, -73]),
+          'e9':  t([-14, -39],   [-20, -50],   [-25, -61],   [-32, -75],   [-40, -92]),
+          'f6':  t([-6, -12],    [-10, -18],   [-13, -22],   [-16, -27],   [-20, -33]),
+          'f7':  t([-6, -16],    [-10, -22],   [-13, -28],   [-16, -34],   [-20, -41]),
+          'f8':  t([-6, -20],    [-10, -28],   [-13, -35],   [-16, -43],   [-20, -53]),
+          'g5':  t([-2, -6],     [-4, -9],     [-5, -11],    [-6, -14],    [-7, -16]),
+          'g6':  t([-2, -8],     [-4, -12],    [-5, -14],    [-6, -17],    [-7, -20]),
+          'h5':  t([0, -4],      [0, -5],      [0, -6],      [0, -8],      [0, -9]),
+          'h6':  t([0, -6],      [0, -8],      [0, -9],      [0, -11],     [0, -13]),
+          'h7':  t([0, -10],     [0, -12],     [0, -15],     [0, -18],     [0, -21]),
+          'h8':  t([0, -14],     [0, -18],     [0, -22],     [0, -27],     [0, -33]),
+          'h9':  t([0, -25],     [0, -30],     [0, -36],     [0, -43],     [0, -52]),
+          'js5': t([2, -2],      [2.5, -2.5],  [3, -3],      [4, -4],      [4.5, -4.5]),
+          'js6': t([3, -3],      [4, -4],      [4.5, -4.5],  [5.5, -5.5],  [6.5, -6.5]),
+          'js7': t([5, -5],      [6, -6],      [7.5, -7.5],  [9, -9],      [10.5, -10.5]),
+          'k5':  t([4, 0],       [6, 1],       [7, 1],       [9, 1],       [11, 2]),
+          'k6':  t([6, 0],       [9, 1],       [10, 1],      [12, 1],      [15, 2]),
+          'm5':  t([6, 2],       [9, 4],       [12, 6],      [15, 7],      [17, 8]),
+          'm6':  t([8, 2],       [12, 4],      [15, 6],      [18, 7],      [21, 8]),
+          'n5':  t([8, 4],       [13, 8],      [16, 10],     [20, 12],     [24, 15]),
+          'n6':  t([10, 4],      [16, 8],      [19, 10],     [23, 12],     [28, 15]),
+          'p6':  t([12, 6],      [20, 12],     [24, 15],     [29, 18],     [35, 22]),
+          'r6':  t([16, 10],     [23, 15],     [28, 19],     [34, 23],     [41, 28]),
+          's6':  t([20, 14],     [27, 19],     [32, 23],     [39, 28],     [48, 35]),
+          't6':  t([null, null], [null, null], [null, null], [null, null], [54, 41]),
+          'u6':  t([24, 18],     [31, 23],     [37, 28],     [44, 33],     [54, 41]),
+          'x6':  t([26, 20],     [36, 28],     [43, 34],     [51, 40],     [64, 51]),
+        };
+
+        // Fix specific ranges
+        shaftToleranceData['u6']['24-30'] = [61, 48];
+        shaftToleranceData['x6']['24-30'] = [77, 64];
+        shaftToleranceData['t6']['24-30'] = [64, 48];
+
+        // --- Theme Colors ---
+        const colors = {
+          bg: '#E0F7FA',         // Pale Mint Blue
+          main: '#3E2723',       // Dark Chocolate
+          accent: '#26C6DA',     // Vivid Mint Green
+          card: '#FFFFFF',       // White
+          textSecondary: '#5D4037', // Lighter Chocolate
+        };
+
+        // --- Main Component ---
+        function App() {
+          const [activeTab, setActiveTab] = useState('screw');
+
+          return (
+            <div style={{ backgroundColor: colors.bg, color: colors.main, minHeight: '100vh' }} className="flex flex-col items-center p-4 sm:p-6 transition-colors duration-300">
+              
+              {/* Header */}
+              <header className="w-full max-w-md mb-6 text-center">
+                <div className="flex items-center justify-center gap-3 mb-2">
+                  <div className="p-3 rounded-full shadow-lg" style={{ backgroundColor: colors.main }}>
+                    <SettingsIcon className="text-white" />
+                  </div>
+                </div>
+                <h1 className="text-2xl font-bold tracking-wide" style={{ color: colors.main }}>
+                  エンジニアリングツール
+                </h1>
+                <p className="text-sm font-medium opacity-80 mt-1">現場で使える設計・加工補助アプリ</p>
+              </header>
+
+              {/* Tab Navigation */}
+              <div className="w-full max-w-md bg-white/50 p-1 rounded-xl flex shadow-sm mb-6 backdrop-blur-sm">
+                <button
+                  onClick={() => setActiveTab('screw')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all duration-200 ${activeTab === 'screw' ? 'shadow-md transform scale-100' : 'hover:bg-white/40 opacity-60'}`}
+                  style={{ 
+                    backgroundColor: activeTab === 'screw' ? colors.accent : 'transparent',
+                    color: activeTab === 'screw' ? '#fff' : colors.main 
+                  }}
+                >
+                  <RulerIcon size={18} />
+                  ネジ下穴径
+                </button>
+                <button
+                  onClick={() => setActiveTab('tolerance')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all duration-200 ${activeTab === 'tolerance' ? 'shadow-md transform scale-100' : 'hover:bg-white/40 opacity-60'}`}
+                  style={{ 
+                    backgroundColor: activeTab === 'tolerance' ? colors.accent : 'transparent',
+                    color: activeTab === 'tolerance' ? '#fff' : colors.main 
+                  }}
+                >
+                  <SwapIcon size={18} />
+                  はめ合い公差
+                </button>
+              </div>
+
+              {/* Main Content Area */}
+              <main className="w-full max-w-md">
+                {activeTab === 'screw' ? <ScrewThreadTool /> : <ToleranceTool />}
+              </main>
+
+              {/* Footer */}
+              <footer className="mt-12 text-xs text-center opacity-60 max-w-xs pb-4">
+                <p>※ データはJIS/ISO規格に基づきますが、実際の加工時は図面指示に従ってください。</p>
+              </footer>
+            </div>
+          );
+        }
+
+        // --- Sub-Component: Screw Thread Tool ---
+        function ScrewThreadTool() {
+          const [selectedScrew, setSelectedScrew] = useState(screwHoleData[9]); // Default M3
+
+          const handleChange = (e) => {
+            const screw = screwHoleData.find(s => s.label === e.target.value);
+            if (screw) setSelectedScrew(screw);
+          };
+
+          return (
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="p-6 border-b border-gray-100">
+                <h2 className="text-lg font-bold flex items-center gap-2" style={{ color: colors.main }}>
+                  <CalculatorIcon size={20} style={{ color: colors.accent }} />
+                  ISOメートル並目ネジ
+                </h2>
+              </div>
+              
+              <div className="p-6 space-y-6">
+                {/* Input Section */}
+                <div className="space-y-2">
+                  <label className="text-sm font-bold ml-1" style={{ color: colors.textSecondary }}>呼び径 (サイズ) を選択</label>
+                  <div className="relative">
+                    <select 
+                      className="w-full p-4 text-lg font-bold bg-gray-50 border-2 border-gray-200 rounded-xl appearance-none focus:outline-none focus:border-cyan-400 transition-colors cursor-pointer"
+                      value={selectedScrew.label}
+                      onChange={handleChange}
+                      style={{ color: colors.main }}
+                    >
+                      {screwHoleData.map((screw) => (
+                        <option key={screw.label} value={screw.label}>
+                          {screw.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDownIcon className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* Result Display */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Pitch Card */}
+                  <div className="bg-[#E0F7FA] rounded-xl p-4 flex flex-col items-center justify-center text-center border border-[#B2EBF2]">
+                    <span className="text-sm font-bold opacity-70 mb-1" style={{ color: colors.textSecondary }}>ピッチ</span>
+                    <div className="text-3xl font-black" style={{ color: colors.main }}>
+                      {selectedScrew.pitch.toFixed(2)}
+                      <span className="text-base font-medium ml-1 opacity-60">mm</span>
+                    </div>
+                  </div>
+
+                  {/* Drill Diameter Card (Highlighted) */}
+                  <div className="bg-[#3E2723] rounded-xl p-4 flex flex-col items-center justify-center text-center shadow-md transform scale-105 ring-2 ring-[#26C6DA]">
+                    <span className="text-sm font-bold opacity-70 mb-1 text-cyan-100">下穴径</span>
+                    <div className="text-4xl font-black text-white">
+                      {selectedScrew.hole.toFixed(2)}
+                      <span className="text-lg font-medium ml-1 text-cyan-200">mm</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-gray-50 p-3 rounded-lg text-xs text-gray-500 flex gap-2 items-start">
+                  <InfoIcon size={16} className="shrink-0 mt-0.5 text-cyan-600" />
+                  <span>
+                    一般的な切削タップ用の下穴径です。転造タップの場合は異なりますのでご注意ください。
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        // --- Sub-Component: Tolerance Tool ---
+        function ToleranceTool() {
+          const [diameter, setDiameter] = useState(10);
+          const [holeClass, setHoleClass] = useState('H7');
+          const [shaftClass, setShaftClass] = useState('h7');
+
+          // Logic to calculate tolerances
+          const result = useMemo(() => {
+            const d = parseFloat(diameter);
+            if (isNaN(d) || d <= 0) return { error: '正の数値を入力してください' };
+            if (d > 30) return { error: '※今回は30mm以下のデータのみ実装されています' };
+
+            // Determine Range Key
+            let rangeKey = null;
+            for (const r of rangeKeys) {
+              if (d <= r.max) {
+                rangeKey = r.key;
+                break;
+              }
+            }
+
+            if (!rangeKey) return { error: '範囲外の数値です' };
+
+            const holeTols = holeToleranceData[holeClass]?.[rangeKey];
+            const shaftTols = shaftToleranceData[shaftClass]?.[rangeKey];
+
+            if (!holeTols || !shaftTols) return { error: 'データが存在しません (または範囲外)' };
+            if (holeTols[0] === null || shaftTols[0] === null) return { error: 'このサイズでの規格値はありません' };
+
+            // Calculate actual dimensions (mm)
+            const holeMax = d + (holeTols[0] / 1000);
+            const holeMin = d + (holeTols[1] / 1000);
+            const shaftMax = d + (shaftTols[0] / 1000);
+            const shaftMin = d + (shaftTols[1] / 1000);
+
+            // Format function for display (+ sign handling)
+            const fmtTol = (val) => {
+              const mmVal = val / 1000;
+              return mmVal > 0 ? `+${mmVal.toFixed(3)}` : mmVal === 0 ? '0' : mmVal.toFixed(3);
+            };
+
+            // Calculate Fits
+            const maxGap = holeMax - shaftMin;
+            const minGap = holeMin - shaftMax;
+
+            let fitType = '';
+            let fitDetails = [];
+
+            if (minGap >= 0) {
+              fitType = '隙間ばめ (Clearance)';
+              fitDetails = [
+                { label: '最大隙間', val: maxGap },
+                { label: '最小隙間', val: minGap }
+              ];
+            } else if (maxGap <= 0) {
+              fitType = 'しまりばめ (Interference)';
+              const maxInterference = shaftMax - holeMin;
+              const minInterference = shaftMin - holeMax;
+              fitDetails = [
+                { label: '最大締め代', val: maxInterference },
+                { label: '最小締め代', val: minInterference }
+              ];
+            } else {
+              fitType = '中間ばめ (Transition)';
+              const maxInterference = shaftMax - holeMin;
+              fitDetails = [
+                { label: '最大隙間', val: maxGap },
+                { label: '最大締め代', val: maxInterference }
+              ];
+            }
+
+            return {
+              rangeLabel: rangeKey,
+              hole: { 
+                max: holeMax.toFixed(3), 
+                min: holeMin.toFixed(3),
+                tolMax: fmtTol(holeTols[0]),
+                tolMin: fmtTol(holeTols[1])
+              },
+              shaft: { 
+                max: shaftMax.toFixed(3), 
+                min: shaftMin.toFixed(3),
+                tolMax: fmtTol(shaftTols[0]),
+                tolMin: fmtTol(shaftTols[1])
+              },
+              fitType,
+              fitDetails
+            };
+
+          }, [diameter, holeClass, shaftClass]);
+
+          return (
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="p-6 border-b border-gray-100">
+                <h2 className="text-lg font-bold flex items-center gap-2" style={{ color: colors.main }}>
+                  <RulerIcon size={20} style={{ color: colors.accent }} />
+                  はめ合い公差 (JIS B 0401)
+                </h2>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* Inputs */}
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">基準寸法 (直径)</label>
+                    <div className="relative flex items-center">
+                      <input
+                        type="number"
+                        value={diameter}
+                        onChange={(e) => setDiameter(e.target.value)}
+                        className="w-full p-3 pl-4 text-xl font-bold bg-gray-50 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-cyan-400 transition-colors text-center"
+                        style={{ color: colors.main }}
+                      />
+                      <span className="absolute right-4 font-bold text-gray-400">mm</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">穴クラス</label>
+                      <div className="relative">
+                        <select
+                          value={holeClass}
+                          onChange={(e) => setHoleClass(e.target.value)}
+                          className="w-full p-3 font-bold bg-gray-50 border-2 border-gray-200 rounded-xl appearance-none focus:outline-none focus:border-cyan-400 transition-colors text-center"
+                          style={{ color: colors.main }}
+                        >
+                          {Object.keys(holeToleranceData).map(k => <option key={k} value={k}>{k}</option>)}
+                        </select>
+                        <ChevronDownIcon size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-1">軸クラス</label>
+                      <div className="relative">
+                        <select
+                          value={shaftClass}
+                          onChange={(e) => setShaftClass(e.target.value)}
+                          className="w-full p-3 font-bold bg-gray-50 border-2 border-gray-200 rounded-xl appearance-none focus:outline-none focus:border-cyan-400 transition-colors text-center"
+                          style={{ color: colors.main }}
+                        >
+                          {Object.keys(shaftToleranceData).map(k => <option key={k} value={k}>{k}</option>)}
+                        </select>
+                        <ChevronDownIcon size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Results */}
+                {result.error ? (
+                  <div className="p-4 bg-red-50 text-red-600 rounded-xl text-center font-bold text-sm">
+                    {result.error}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Dimensions Card */}
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Hole Result */}
+                      <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 relative">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-cyan-200 rounded-t-xl"></div>
+                        <span className="text-xs font-bold text-gray-400 block mb-1">穴 ({holeClass})</span>
+                        <div className="flex justify-between items-baseline">
+                          <span className="text-2xl font-bold text-gray-700">{diameter}</span>
+                          <div className="flex flex-col text-right text-xs font-mono font-medium text-gray-500">
+                            <span>{result.hole.tolMax}</span>
+                            <span>{result.hole.tolMin}</span>
+                          </div>
+                        </div>
+                        <div className="mt-2 pt-2 border-t border-gray-200 flex justify-between text-xs font-bold">
+                           <span className="text-cyan-600">Max: {result.hole.max}</span>
+                           <span className="text-cyan-600">Min: {result.hole.min}</span>
+                        </div>
+                      </div>
+
+                      {/* Shaft Result */}
+                      <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 relative">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-brown-400 rounded-t-xl" style={{backgroundColor: colors.textSecondary}}></div>
+                        <span className="text-xs font-bold text-gray-400 block mb-1">軸 ({shaftClass})</span>
+                        <div className="flex justify-between items-baseline">
+                          <span className="text-2xl font-bold text-gray-700">{diameter}</span>
+                          <div className="flex flex-col text-right text-xs font-mono font-medium text-gray-500">
+                            <span>{result.shaft.tolMax}</span>
+                            <span>{result.shaft.tolMin}</span>
+                          </div>
+                        </div>
+                        <div className="mt-2 pt-2 border-t border-gray-200 flex justify-between text-xs font-bold">
+                           <span className="text-brown-600" style={{color: colors.textSecondary}}>Max: {result.shaft.max}</span>
+                           <span className="text-brown-600" style={{color: colors.textSecondary}}>Min: {result.shaft.min}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Fit Status Card */}
+                    <div className="bg-[#3E2723] text-white rounded-xl p-4 shadow-md relative overflow-hidden">
+                      {/* Decorative Circle */}
+                      <div className="absolute -right-4 -top-4 w-24 h-24 bg-[#26C6DA] rounded-full opacity-20 blur-xl"></div>
+                      
+                      <div className="relative z-10">
+                        <div className="text-xs font-bold text-cyan-200 uppercase tracking-widest mb-1">はめ合い状態</div>
+                        <div className="text-xl font-bold mb-3 flex items-center gap-2">
+                          {result.fitType.includes('隙間') && <div className="w-3 h-3 rounded-full bg-green-400 animate-pulse"></div>}
+                          {result.fitType.includes('しまり') && <div className="w-3 h-3 rounded-full bg-red-400 animate-pulse"></div>}
+                          {result.fitType.includes('中間') && <div className="w-3 h-3 rounded-full bg-yellow-400 animate-pulse"></div>}
+                          {result.fitType}
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 bg-white/10 p-3 rounded-lg backdrop-blur-sm">
+                          {result.fitDetails.map((item, idx) => (
+                            <div key={idx} className="text-center">
+                              <span className="text-xs text-cyan-100 block opacity-80">{item.label}</span>
+                              <span className="text-lg font-mono font-bold">{(item.val * 1000).toFixed(0)} <span className="text-xs opacity-60">μm</span></span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
