@@ -34,7 +34,7 @@
             align-items: center;
             justify-content: center;
             
-            /* Background Configuration (Layer 0) */
+            /* Background Configuration (Layer 0 - Day) */
             background-image: url('W_city.jpg'); 
             background-size: cover;
             background-position: center;
@@ -42,6 +42,31 @@
             
             background-color: var(--mint-main);
             position: relative; /* 子要素のabsolute配置の基準 */
+        }
+
+        /* --- Night Background Image (Layer 0.5) --- */
+        /* 昼の画像の上に重ねて、夜にフェードインさせるための擬似要素 */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('W_city_night.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            
+            opacity: 0; /* 初期状態は透明（昼） */
+            z-index: 0; /* body(Layer0)より上、ネオン(Layer1)より下 */
+            pointer-events: none;
+            transition: opacity 2s ease; /* 2秒かけてフェード */
+        }
+
+        /* 夜モード時は夜背景を表示 */
+        body.is-night::before {
+            opacity: 1;
         }
 
         /* --- Neon Sign Image (Layer 1) --- */
@@ -55,7 +80,7 @@
             object-position: center;
             
             /* 配置設定 */
-            z-index: 1; /* 背景より手前、オーバーレイより奥 */
+            z-index: 1; /* 夜背景より手前、オーバーレイより奥 */
             pointer-events: none; /* クリックを透過させる */
             
             /* 初期状態（昼） */
