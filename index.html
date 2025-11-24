@@ -28,23 +28,48 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             height: 100vh;
             width: 100vw;
-            overflow: hidden; /* Prevent scrolling if possible to keep it app-like */
+            overflow: hidden; /* Prevent scrolling */
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             
-            /* Background Configuration */
+            /* Background Configuration (Layer 0) */
             background-image: url('W_city.jpg'); 
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
             
-            /* Fallback color in case image doesn't load immediately */
             background-color: var(--mint-main);
+            position: relative; /* 子要素のabsolute配置の基準 */
         }
 
-        /* --- Night Overlay (New Feature) --- */
+        /* --- Neon Sign Image (Layer 1) --- */
+        #neon-sign {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* 背景画像のbackground-size: coverと挙動を合わせる */
+            object-position: center;
+            
+            /* 配置設定 */
+            z-index: 1; /* 背景より手前、オーバーレイより奥 */
+            pointer-events: none; /* クリックを透過させる */
+            
+            /* 初期状態（昼） */
+            filter: brightness(100%) saturate(100%);
+            transition: filter 2s ease; /* 2秒かけて輝きを変化 */
+        }
+
+        /* 夜モード時のネオンの輝き */
+        body.is-night #neon-sign {
+            /* スモーク越しでも輝いて見えるように輝度と彩度を大幅に上げる */
+            filter: brightness(200%) saturate(180%);
+        }
+
+        /* --- Night Overlay (Layer 2) --- */
         #night-overlay {
             position: fixed;
             top: 0;
@@ -53,21 +78,24 @@
             height: 100%;
             background-color: rgba(0, 0, 0, 0.6); /* 半透明の黒フィルター */
             opacity: 0; /* 初期状態は透明 */
-            pointer-events: none; /* クリックを透過させる */
-            z-index: 5; /* 背景(body)より上、コンテンツ(z-index:10)より下に配置 */
-            transition: opacity 2s ease; /* 2秒かけてじわっと変化 */
+            pointer-events: none;
+            
+            /* 配置設定 */
+            z-index: 5; /* ネオンより手前、コンテンツより奥 */
+            transition: opacity 2s ease;
         }
 
-        /* 夜モード時のスタイル */
+        /* 夜モード時のオーバーレイ表示 */
         body.is-night #night-overlay {
             opacity: 1;
         }
 
-        /* --- Title Styling --- */
+        /* --- Title Styling (Layer 3) --- */
         header {
             margin-bottom: 40px;
             text-align: center;
-            z-index: 10; /* オーバーレイより手前に表示 */
+            z-index: 10; /* 最前面 */
+            position: relative;
         }
 
         h1 {
@@ -77,7 +105,7 @@
             text-transform: uppercase;
             letter-spacing: 2px;
             
-            /* Mint Outline/Shadow Effect for visibility */
+            /* Mint Outline/Shadow Effect */
             text-shadow: 
                 -2px -2px 0 var(--mint-bright),  
                  2px -2px 0 var(--mint-bright),
@@ -92,15 +120,15 @@
             transform: scale(1.02);
         }
 
-        /* --- Grid Container --- */
+        /* --- Grid Container (Layer 3) --- */
         .app-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 40px; /* Space between icons */
+            gap: 40px;
             padding: 20px;
-            z-index: 10; /* オーバーレイより手前に表示 */
+            z-index: 10; /* 最前面 */
+            position: relative;
             
-            /* Optional: faint backdrop to help icons pop slightly without obscuring city */
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(2px);
             border-radius: 20px;
@@ -109,15 +137,14 @@
 
         /* --- Icon Button Styling --- */
         .app-link {
-            position: relative; /* For tooltip positioning */
+            position: relative;
             display: flex;
             justify-content: center;
             align-items: center;
             text-decoration: none;
-            width: 80px;  /* Spec: 60px - 80px */
+            width: 80px;
             height: 80px;
             
-            /* Card Style */
             background-color: var(--choco-dark);
             border-radius: 16px;
             border: 2px solid var(--choco-light);
@@ -126,14 +153,12 @@
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        /* Icon Graphic */
         .app-link i {
             font-size: 32px;
             color: var(--mint-main);
             transition: color 0.3s ease;
         }
 
-        /* Hover Effects on Button */
         .app-link:hover {
             transform: translateY(-5px) scale(1.1);
             background-color: var(--choco-light);
@@ -145,7 +170,6 @@
             color: var(--mint-bright);
         }
 
-        /* Active/Click Effect */
         .app-link:active {
             transform: translateY(0) scale(0.95);
         }
@@ -153,7 +177,7 @@
         /* --- Tooltip Styling --- */
         .tooltip {
             position: absolute;
-            bottom: -40px; /* Position below the icon */
+            bottom: -40px;
             left: 50%;
             transform: translateX(-50%) translateY(10px);
             
@@ -164,19 +188,17 @@
             font-size: 0.85rem;
             font-weight: bold;
             white-space: nowrap;
-            pointer-events: none; /* Let clicks pass through */
+            pointer-events: none;
             
-            /* Border for cute look */
             border: 2px solid var(--choco-dark);
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
             
-            /* Animation States */
             opacity: 0;
             visibility: hidden;
             transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s;
+            z-index: 20;
         }
 
-        /* Tiny triangle for tooltip */
         .tooltip::before {
             content: '';
             position: absolute;
@@ -188,7 +210,6 @@
             border-color: transparent transparent var(--choco-dark) transparent;
         }
         
-        /* Inner triangle for color match */
         .tooltip::after {
             content: '';
             position: absolute;
@@ -200,7 +221,6 @@
             border-color: transparent transparent var(--mint-bright) transparent;
         }
 
-        /* Show Tooltip on Hover */
         .app-link:hover .tooltip {
             opacity: 1;
             visibility: visible;
@@ -216,12 +236,11 @@
             }
 
             .app-grid {
-                grid-template-columns: repeat(2, 1fr); /* 2 columns on mobile */
+                grid-template-columns: repeat(2, 1fr);
                 gap: 30px;
             }
         }
         
-        /* Very small screens */
         @media (max-width: 350px) {
              .app-grid {
                 gap: 20px;
@@ -234,50 +253,53 @@
 </head>
 <body>
     
-    <!-- 夜間フィルター用オーバーレイ -->
+    <!-- Neon Sign Image (Layer 1) -->
+    <img id="neon-sign" src="W_city_neon.png" alt="Sule Workstation Box Neon">
+
+    <!-- Night Overlay (Layer 2) -->
     <div id="night-overlay"></div>
 
-    <!-- Header / Title -->
+    <!-- Header / Title (Layer 3) -->
     <header>
         <h1>Sule Workstation Box</h1>
     </header>
 
-    <!-- Main Navigation Grid -->
+    <!-- Main Navigation Grid (Layer 3) -->
     <main class="app-grid">
         
         <!-- 1. Translator -->
         <a href="https://my-translator-app-kappa.vercel.app" class="app-link" target="_blank" aria-label="Translator">
-            <i class="fa-solid fa-language"></i> <!-- Globe/Translate Icon -->
+            <i class="fa-solid fa-language"></i>
             <div class="tooltip">Translator</div>
         </a>
 
         <!-- 2. Unit Converter -->
         <a href="unitconverter.html" class="app-link" target="_blank" aria-label="Unit Converter">
-            <i class="fa-solid fa-scale-balanced"></i> <!-- Scale/Balance Icon -->
+            <i class="fa-solid fa-scale-balanced"></i>
             <div class="tooltip">Unit Converter</div>
         </a>
 
         <!-- 3. Calculator -->
         <a href="calculator.html" class="app-link" target="_blank" aria-label="Calculator">
-            <i class="fa-solid fa-calculator"></i> <!-- Calculator Icon -->
+            <i class="fa-solid fa-calculator"></i>
             <div class="tooltip">Calculator</div>
         </a>
 
         <!-- 4. Weather -->
         <a href="weather.html" class="app-link" target="_blank" aria-label="Weather">
-            <i class="fa-solid fa-cloud-sun"></i> <!-- Sun & Cloud Icon -->
+            <i class="fa-solid fa-cloud-sun"></i>
             <div class="tooltip">Weather</div>
         </a>
 
         <!-- 5. Coming Soon -->
         <a href="#" class="app-link" target="_blank" aria-label="Coming Soon">
-            <i class="fa-solid fa-lock"></i> <!-- Lock Icon -->
+            <i class="fa-solid fa-lock"></i>
             <div class="tooltip">Coming Soon</div>
         </a>
 
         <!-- 6. Coming Soon -->
         <a href="#" class="app-link" target="_blank" aria-label="Coming Soon">
-            <i class="fa-solid fa-lock"></i> <!-- Lock Icon -->
+            <i class="fa-solid fa-lock"></i>
             <div class="tooltip">Coming Soon</div>
         </a>
 
@@ -290,23 +312,21 @@
             const hour = now.getHours();
             
             // 18:00 (18) から 翌6:00 (6) までを夜とする
-            // hour >= 18 (18時以降) または hour < 6 (深夜0時〜早朝6時前)
             const isNight = hour >= 18 || hour < 6;
             
             if (isNight) {
                 document.body.classList.add('is-night');
-                // コンソール確認用（開発時のみ）
-                // console.log("Night mode: ON (Current hour: " + hour + ")");
+                // console.log("Night mode: ON");
             } else {
                 document.body.classList.remove('is-night');
-                // console.log("Night mode: OFF (Current hour: " + hour + ")");
+                // console.log("Night mode: OFF");
             }
         }
 
         // ページ読み込み時に即実行
         checkNightTime();
 
-        // その後、1分ごとにチェック (60000ms)
+        // その後、1分ごとにチェック
         setInterval(checkNightTime, 60000);
     </script>
 </body>
