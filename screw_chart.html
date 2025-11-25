@@ -3,22 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Screw & Nut Standards - Choco Mint</title>
+    <title>Screw & Nut Standards - Multi Theme</title>
     <style>
-        /* * ベーススタイルとチョコミントテーマ定義
-         * Tailwind CSSのユーティリティに近いスタイルを定義しています
-         */
+        /* * テーマ定義 (CSS変数) */
         :root {
-            --bg-color: #E0F7FA;          /* 淡いミントブルー */
-            --main-color: #3E2723;        /* ダークチョコレート */
-            --accent-color: #26C6DA;      /* 鮮やかなミントグリーン */
-            --accent-light: #B2EBF2;      /* 薄いアクセント */
+            /* 共通変数 */
             --white: #FFFFFF;
+            --main-color: #3E2723;        /* ダークチョコレート (全テーマ共通・文字色) */
             --gray-50: #F9FAFB;
             --gray-100: #F3F4F6;
             --gray-200: #E5E7EB;
-            --gray-400: #9CA3AF;
-            --error-bg: #FEF2F2;
+            
+            /* デフォルト: チョコミント (Mint) */
+            --bg-color: #E0F7FA;          /* 背景: 淡いミント */
+            --accent-color: #26C6DA;      /* アクセント: 鮮やかミント */
+            --accent-light: #B2EBF2;      /* 薄いミント */
+            --table-stripe: #F5FFFA;      /* テーブル縞模様 */
+            
+            --select-border: #3E2723;     /* セレクトボックスの枠線色 */
+        }
+
+        /* チョコバナナ (Banana) */
+        [data-theme="banana"] {
+            --bg-color: #FFFDE7;          /* 背景: クリームイエロー */
+            --accent-color: #FBC02D;      /* アクセント: バナナイエロー */
+            --accent-light: #FFF59D;      /* 薄い黄色 */
+            --table-stripe: #FFFDE7;
+        }
+
+        /* ストロベリーチョコ (Strawberry) */
+        [data-theme="strawberry"] {
+            --bg-color: #FCE4EC;          /* 背景: ペールピンク */
+            --accent-color: #EC407A;      /* アクセント: ストロベリーピンク */
+            --accent-light: #F8BBD0;      /* 薄いピンク */
+            --table-stripe: #FFF0F5;
         }
 
         body {
@@ -29,26 +47,91 @@
             color: var(--main-color);
             min-height: 100vh;
             line-height: 1.5;
-            transition: background-color 0.3s;
+            transition: background-color 0.5s ease, color 0.5s ease;
         }
 
-        /* ユーティリティクラスの再現 */
         .container {
-            max-width: 56rem; /* max-w-4xl approx */
+            max-width: 56rem;
             margin: 0 auto;
             padding: 1rem;
+            position: relative;
         }
         
         @media (min-width: 768px) {
             .container { padding: 2rem; }
         }
 
-        .space-y-8 > * + * { margin-top: 2rem; }
-        .space-y-4 > * + * { margin-top: 1rem; }
-        .space-y-2 > * + * { margin-top: 0.5rem; }
+        /* --- ヘッダーエリア --- */
+        .header { text-align: center; margin-bottom: 2rem; position: relative; padding-top: 3rem; }
+        
+        /* テーマ切り替えエリア（右上配置） */
+        .theme-switcher-container {
+            position: absolute;
+            top: 0;
+            right: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            z-index: 10;
+        }
+        @media (max-width: 640px) {
+            .theme-switcher-container {
+                position: relative;
+                justify-content: center;
+                margin-bottom: 1.5rem;
+                top: auto;
+                right: auto;
+            }
+            .header { padding-top: 0; }
+        }
 
-        /* ヘッダー */
-        .header { text-align: center; margin-bottom: 2rem; }
+        /* パレットアイコン */
+        .palette-icon {
+            color: var(--main-color); /* 茶色 */
+            opacity: 0.8;
+            display: flex;
+            align-items: center;
+        }
+
+        /* カスタムセレクトボックス（画像のデザインを再現） */
+        .custom-select-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .theme-select {
+            appearance: none;
+            -webkit-appearance: none;
+            background-color: var(--white);
+            border: 2px solid var(--select-border); /* 茶色の枠線 */
+            border-radius: 9999px; /* 丸い形状 */
+            padding: 0.5rem 2.5rem 0.5rem 1rem; /* 右側に矢印用スペース */
+            font-size: 0.875rem;
+            font-weight: bold;
+            color: var(--main-color);
+            cursor: pointer;
+            outline: none;
+            min-width: 160px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: all 0.2s;
+        }
+        
+        .theme-select:hover {
+            background-color: #FAFAFA;
+        }
+
+        /* セレクトボックス内の矢印アイコン */
+        .theme-select-arrow {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: var(--main-color);
+            opacity: 0.7;
+        }
+
+        /* --- メインタイトル --- */
         .icon-wrapper {
             display: inline-flex;
             align-items: center;
@@ -58,6 +141,7 @@
             background-color: var(--main-color);
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
             margin-bottom: 0.5rem;
+            transition: background-color 0.3s;
         }
         .header h1 {
             font-size: 1.875rem;
@@ -68,7 +152,7 @@
         @media (min-width: 768px) { .header h1 { font-size: 2.25rem; } }
         .header p { font-size: 0.875rem; font-weight: 500; opacity: 0.8; margin: 0; }
 
-        /* コントロールエリア */
+        /* --- コントロールエリア --- */
         .control-section {
             background-color: var(--white);
             border-radius: 1rem;
@@ -113,31 +197,32 @@
             border-radius: 9999px;
             color: var(--white);
             background-color: var(--accent-color);
+            transition: background-color 0.5s ease;
         }
 
-        /* セレクトボックス */
+        /* ネジ選択ボックス (下の大きなセレクトボックス) */
         .select-wrapper {
             position: relative;
             width: 100%;
         }
         @media (min-width: 768px) { .select-wrapper { width: 16rem; } }
 
-        select {
+        select.main-select {
             width: 100%;
             appearance: none;
             -webkit-appearance: none;
             padding: 0.75rem 2.5rem 0.75rem 1rem;
             border-radius: 0.75rem;
             border: 2px solid var(--accent-color);
-            background-color: #F0FDFA;
+            background-color: #F0FDFA; /* デフォルト背景 */
             color: var(--main-color);
             font-weight: bold;
             cursor: pointer;
             font-size: 1rem;
             outline: none;
-            transition: all 0.2s;
+            transition: all 0.5s ease;
         }
-        select:focus {
+        select.main-select:focus {
             box-shadow: 0 0 0 2px var(--bg-color), 0 0 0 4px var(--accent-color);
         }
         .select-icon {
@@ -147,9 +232,14 @@
             transform: translateY(-50%);
             pointer-events: none;
             color: var(--accent-color);
+            transition: color 0.5s ease;
         }
+        
+        /* テーマごとの微調整 */
+        [data-theme="banana"] select.main-select { background-color: #FFF9C4; }
+        [data-theme="strawberry"] select.main-select { background-color: #FEEBF1; }
 
-        /* メイングリッド */
+        /* --- メインコンテンツ --- */
         .main-grid {
             display: grid;
             grid-template-columns: 1fr;
@@ -167,7 +257,6 @@
             .col-span-3 { grid-column: span 3; }
         }
 
-        /* カード共通 */
         .card {
             background-color: var(--white);
             border-radius: 1rem;
@@ -182,11 +271,11 @@
             font-weight: bold;
             text-align: center;
             color: var(--white);
+            transition: background-color 0.5s ease;
         }
         .header-accent { background-color: var(--accent-color); }
         .header-main { background-color: var(--main-color); }
 
-        /* 画像エリア */
         .image-container {
             flex: 1;
             display: flex;
@@ -201,10 +290,10 @@
             max-width: 100%;
             max-height: 16rem;
             object-fit: contain;
-            display: block; /* 初期状態 */
+            display: block;
         }
         .image-placeholder {
-            display: none; /* 初期状態 */
+            display: none;
             text-align: center;
             padding: 1.5rem;
             border: 4px dashed var(--accent-light);
@@ -216,81 +305,69 @@
             justify-content: center;
             gap: 0.5rem;
             box-sizing: border-box;
+            transition: border-color 0.5s ease;
         }
-        .placeholder-icon {
-            width: 2.5rem;
-            height: 2.5rem;
-            opacity: 0.5;
-            color: var(--main-color);
-        }
+        .placeholder-icon { width: 2.5rem; height: 2.5rem; opacity: 0.5; color: var(--main-color); }
         .code-snippet {
-            font-size: 0.75rem;
-            font-family: monospace;
-            background-color: var(--gray-200);
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.25rem;
-            color: #4B5563;
-            word-break: break-all;
+            font-size: 0.75rem; font-family: monospace; background-color: var(--gray-200);
+            padding: 0.25rem 0.5rem; border-radius: 0.25rem; color: #4B5563; word-break: break-all;
         }
 
-        /* テーブルエリア */
-        .table-container {
-            overflow-x: auto;
-            flex: 1;
-        }
-        table {
-            width: 100%;
-            text-align: center;
-            border-collapse: collapse;
-        }
+        .table-container { overflow-x: auto; flex: 1; }
+        table { width: 100%; text-align: center; border-collapse: collapse; }
         th {
             background-color: var(--accent-light);
-            padding: 0.75rem;
-            font-size: 0.875rem;
-            font-weight: bold;
-            border-bottom: 2px solid var(--accent-color);
-            color: var(--main-color);
-            white-space: nowrap;
+            padding: 0.75rem; font-size: 0.875rem; font-weight: bold;
+            border-bottom: 2px solid var(--accent-color); color: var(--main-color); white-space: nowrap;
+            transition: background-color 0.5s ease, border-color 0.5s ease;
         }
-        td {
-            padding: 0.75rem;
-            font-size: 0.875rem;
-            border-bottom: 1px solid var(--gray-100);
-            font-weight: 500;
-        }
-        /* ストライプ（JSでクラス制御するが、CSSで nth-child も定義しておく） */
-        tbody tr:nth-child(even) { background-color: #F5FFFA; }
-        tbody tr:hover { background-color: rgba(38, 198, 218, 0.1); }
+        td { padding: 0.75rem; font-size: 0.875rem; border-bottom: 1px solid var(--gray-100); font-weight: 500; }
+        tbody tr:nth-child(even) { background-color: var(--table-stripe); transition: background-color 0.5s ease; }
+        tbody tr:hover { background-color: var(--accent-light); transition: background-color 0.2s; }
 
-        .table-footer {
-            padding: 0.75rem;
-            font-size: 0.75rem;
-            text-align: center;
-            opacity: 0.6;
-            background-color: var(--gray-50);
-        }
+        .table-footer { padding: 0.75rem; font-size: 0.75rem; text-align: center; opacity: 0.6; background-color: var(--gray-50); }
 
-        /* フッター */
-        .site-footer {
-            text-align: center;
-            font-size: 0.75rem;
-            opacity: 0.6;
-            padding: 1rem 0;
-        }
-
-        /* 状態クラス */
         .hidden { display: none !important; }
         .flex { display: flex !important; }
     </style>
 </head>
-<body>
+<body data-theme="mint">
 
     <div class="container">
         
         <!-- ヘッダー -->
         <header class="header">
+            <!-- テーマ切り替えUI (画像のデザインを再現) -->
+            <div class="theme-switcher-container">
+                <!-- パレットアイコン -->
+                <div class="palette-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle>
+                        <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle>
+                        <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle>
+                        <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle>
+                        <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path>
+                    </svg>
+                </div>
+                
+                <!-- カスタムセレクトボックス -->
+                <div class="custom-select-wrapper">
+                    <select id="theme-select" class="theme-select">
+                        <option value="mint">チョコミント</option>
+                        <option value="banana">チョコバナナ</option>
+                        <option value="strawberry">ストロベリーチョコ</option>
+                    </select>
+                    <!-- 下矢印アイコン -->
+                    <div class="theme-select-arrow">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m6 9 6 6 6-6"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- アプリタイトル -->
             <div class="icon-wrapper">
-                <!-- Lucide Settings Icon -->
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
                     <circle cx="12" cy="12" r="3"></circle>
@@ -312,11 +389,10 @@
                 </div>
 
                 <div class="select-wrapper">
-                    <select id="screw-select">
+                    <select id="screw-select" class="main-select">
                         <!-- JSでオプションを生成 -->
                     </select>
                     <div class="select-icon">
-                        <!-- Lucide ChevronDown Icon -->
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="m6 9 6 6 6-6"/>
                         </svg>
@@ -327,7 +403,6 @@
 
         <!-- メインコンテンツ -->
         <main class="main-grid">
-            
             <!-- 左側: 図面画像 -->
             <div class="col-span-2">
                 <div class="card">
@@ -335,12 +410,8 @@
                         形状・寸法図
                     </div>
                     <div class="image-container">
-                        <!-- 正常時の画像 -->
                         <img id="screw-image" src="" alt="図面" class="screw-image">
-                        
-                        <!-- エラー時のプレースホルダー -->
                         <div id="image-placeholder" class="image-placeholder">
-                            <!-- Lucide Info Icon -->
                             <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <circle cx="12" cy="12" r="10"></circle>
                                 <path d="M12 16v-4"></path>
@@ -365,13 +436,9 @@
                     <div class="table-container">
                         <table id="dimensions-table">
                             <thead>
-                                <tr id="table-header-row">
-                                    <!-- JSで生成 -->
-                                </tr>
+                                <tr id="table-header-row"></tr>
                             </thead>
-                            <tbody id="table-body">
-                                <!-- JSで生成 -->
-                            </tbody>
+                            <tbody id="table-body"></tbody>
                         </table>
                     </div>
                     <div class="table-footer">
@@ -385,9 +452,6 @@
 
     <!-- JavaScript ロジック -->
     <script>
-        // -----------------------------------------------------------------------------
-        // データ定義
-        // -----------------------------------------------------------------------------
         const SCREW_DATA = {
             pan: {
                 id: 'pan',
@@ -508,9 +572,6 @@
 
         const SCREW_ORDER = ['button', 'cap', 'truss', 'pan', 'nut'];
 
-        // -----------------------------------------------------------------------------
-        // アプリケーションロジック
-        // -----------------------------------------------------------------------------
         document.addEventListener('DOMContentLoaded', () => {
             const selectEl = document.getElementById('screw-select');
             const displayNameEl = document.getElementById('display-name');
@@ -520,8 +581,9 @@
             const placeholderPathEl = document.getElementById('placeholder-path');
             const tableHeaderRowEl = document.getElementById('table-header-row');
             const tableBodyEl = document.getElementById('table-body');
+            const themeSelectEl = document.getElementById('theme-select');
 
-            // 1. セレクトボックスのオプション生成
+            // 1. ネジ選択のオプション生成
             SCREW_ORDER.forEach(id => {
                 const data = SCREW_DATA[id];
                 const option = document.createElement('option');
@@ -533,23 +595,17 @@
             // 2. 表示更新関数
             function updateView(id) {
                 const data = SCREW_DATA[id];
-
-                // タイトル更新
                 displayNameEl.textContent = data.name;
                 displayEnglishNameEl.textContent = data.englishName;
 
-                // 画像更新とエラーハンドリングリセット
                 screwImageEl.classList.remove('hidden');
-                imagePlaceholderEl.classList.remove('flex'); // flexクラスを削除して非表示に
-                imagePlaceholderEl.classList.add('hidden'); // hiddenクラスを念のため追加
+                imagePlaceholderEl.classList.remove('flex');
+                imagePlaceholderEl.classList.add('hidden');
                 
                 screwImageEl.src = data.imagePath;
                 screwImageEl.alt = `${data.name} 図面`;
-                
-                // エラーパス表示用（まだ見えてないがデータセットしておく）
                 placeholderPathEl.textContent = `src="${data.imagePath}"`;
 
-                // テーブルヘッダー生成
                 tableHeaderRowEl.innerHTML = '';
                 data.headers.forEach(header => {
                     const th = document.createElement('th');
@@ -557,7 +613,6 @@
                     tableHeaderRowEl.appendChild(th);
                 });
 
-                // テーブルボディ生成
                 tableBodyEl.innerHTML = '';
                 data.dimensions.forEach(row => {
                     const tr = document.createElement('tr');
@@ -570,21 +625,26 @@
                 });
             }
 
-            // 3. イベントリスナー設定
-            selectEl.addEventListener('change', (e) => {
-                updateView(e.target.value);
-            });
+            // 3. テーマ切り替え関数
+            function updateTheme(themeName) {
+                document.body.setAttribute('data-theme', themeName);
+            }
 
-            // 画像読み込みエラー時の処理
+            // 4. イベントリスナー
+            selectEl.addEventListener('change', (e) => updateView(e.target.value));
+            themeSelectEl.addEventListener('change', (e) => updateTheme(e.target.value));
+
             screwImageEl.addEventListener('error', () => {
                 screwImageEl.classList.add('hidden');
                 imagePlaceholderEl.classList.remove('hidden');
-                imagePlaceholderEl.classList.add('flex'); // Flexboxレイアウトを有効化
+                imagePlaceholderEl.classList.add('flex');
             });
 
-            // 初期表示 (ボタンボルト)
+            // 初期化
             selectEl.value = 'button';
             updateView('button');
+            themeSelectEl.value = 'mint';
+            updateTheme('mint');
         });
     </script>
 </body>
