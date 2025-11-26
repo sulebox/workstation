@@ -261,17 +261,14 @@
             }
 
             .app-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 30px;
+                grid-template-columns: repeat(3, 1fr); /* Keep 3 cols on mobile if items are small enough, or change to 2 */
+                gap: 20px;
             }
         }
         
-        @media (max-width: 350px) {
-             .app-grid {
-                gap: 20px;
-            }
-            h1 {
-                font-size: 1.5rem;
+        @media (max-width: 400px) {
+            .app-grid {
+                grid-template-columns: repeat(2, 1fr); /* 2 columns on very small screens */
             }
         }
     </style>
@@ -298,13 +295,13 @@
             <div class="tooltip">単位変換</div>
         </a>
 
-        <!-- 2. ネジ一覧 (New) -->
+        <!-- 2. ネジ一覧 -->
         <a href="screw_chart.html" class="app-link" target="_blank" aria-label="ネジ一覧">
             <i class="fa-solid fa-screwdriver-wrench"></i> <!-- Tool/Wrench Icon -->
             <div class="tooltip">ネジ一覧</div>
         </a>
 
-        <!-- 3. 公差一覧 (New) -->
+        <!-- 3. 公差一覧 -->
         <a href="tolerance_chart.html" class="app-link" target="_blank" aria-label="公差一覧">
             <i class="fa-solid fa-ruler-combined"></i> <!-- Ruler/Measurement Icon -->
             <div class="tooltip">公差一覧</div>
@@ -326,6 +323,24 @@
         <a href="weather.html" class="app-link" target="_blank" aria-label="お天気">
             <i class="fa-solid fa-cloud-sun"></i> <!-- Sun & Cloud Icon -->
             <div class="tooltip">お天気</div>
+        </a>
+
+        <!-- 7. ドラゴンレーダーマップ (New) -->
+        <a href="https://dragon-radar-nav.vercel.app" class="app-link" target="_blank" aria-label="ドラゴンレーダー">
+            <i class="fa-solid fa-crosshairs"></i> <!-- Radar/Target Icon -->
+            <div class="tooltip">レーダーマップ</div>
+        </a>
+
+        <!-- 8. Coming Soon (New) -->
+        <a href="#" class="app-link" target="_blank" aria-label="Coming Soon">
+            <i class="fa-solid fa-lock"></i>
+            <div class="tooltip">Coming Soon</div>
+        </a>
+
+        <!-- 9. Coming Soon (New) -->
+        <a href="#" class="app-link" target="_blank" aria-label="Coming Soon">
+            <i class="fa-solid fa-lock"></i>
+            <div class="tooltip">Coming Soon</div>
         </a>
 
     </main>
