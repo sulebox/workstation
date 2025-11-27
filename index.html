@@ -199,16 +199,18 @@
             transform: translateY(0) scale(0.95);
         }
 
-        /* --- Tooltip Styling --- */
+        /* --- Tooltip Styling (Revised) --- */
         .tooltip {
             position: absolute;
-            bottom: -40px;
+            /* 下ではなく「上」に表示するように変更 */
+            bottom: auto; 
+            top: -50px; /* アイコンの上に配置 */
             left: 50%;
-            transform: translateX(-50%) translateY(10px);
+            transform: translateX(-50%);
             
             background-color: var(--mint-bright);
             color: var(--choco-dark);
-            padding: 5px 10px;
+            padding: 6px 10px;
             border-radius: 8px;
             font-size: 0.85rem;
             font-weight: bold;
@@ -221,35 +223,40 @@
             opacity: 0;
             visibility: hidden;
             transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s;
-            z-index: 20;
+            z-index: 100; /* 他の要素より手前に */
         }
 
+        /* Tiny triangle for tooltip (上ではなく下に配置) */
         .tooltip::before {
             content: '';
             position: absolute;
-            top: -6px;
+            top: auto;
+            bottom: -6px; /* 下辺 */
             left: 50%;
             transform: translateX(-50%);
-            border-width: 0 6px 6px 6px;
+            border-width: 6px 6px 0 6px; /* 下向きの三角形 */
             border-style: solid;
-            border-color: transparent transparent var(--choco-dark) transparent;
+            border-color: var(--choco-dark) transparent transparent transparent;
         }
         
+        /* Inner triangle for color match */
         .tooltip::after {
             content: '';
             position: absolute;
-            top: -3px;
+            top: auto;
+            bottom: -3px; /* 枠線分ずらす */
             left: 50%;
             transform: translateX(-50%);
-            border-width: 0 4px 4px 4px;
+            border-width: 4px 4px 0 4px;
             border-style: solid;
-            border-color: transparent transparent var(--mint-bright) transparent;
+            border-color: var(--mint-bright) transparent transparent transparent;
         }
 
+        /* Show Tooltip on Hover - 少し上にフワッと出るアニメーション */
         .app-link:hover .tooltip {
             opacity: 1;
             visibility: visible;
-            transform: translateX(-50%) translateY(0);
+            transform: translateX(-50%) translateY(-5px);
         }
 
         /* --- Mobile Responsiveness --- */
@@ -261,14 +268,41 @@
             }
 
             .app-grid {
-                grid-template-columns: repeat(3, 1fr); /* Keep 3 cols on mobile if items are small enough, or change to 2 */
-                gap: 20px;
+                /* スマホでも常に3列を維持 */
+                grid-template-columns: repeat(3, 1fr); 
+                gap: 15px; /* 間隔を少し詰める */
+                padding: 15px;
+            }
+
+            /* スマホではアイコンを少し小さくして収まりやすくする */
+            .app-link {
+                width: 65px;
+                height: 65px;
+            }
+
+            .app-link i {
+                font-size: 26px; /* アイコンサイズも調整 */
+            }
+
+            /* ツールチップ位置の微調整（見切れ防止） */
+            .tooltip {
+                top: -45px;
+                font-size: 0.75rem;
+                padding: 4px 8px;
             }
         }
         
-        @media (max-width: 400px) {
+        @media (max-width: 350px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+            /* 極小画面でも3列維持のためさらに調整 */
             .app-grid {
-                grid-template-columns: repeat(2, 1fr); /* 2 columns on very small screens */
+                gap: 10px;
+            }
+            .app-link {
+                width: 60px;
+                height: 60px;
             }
         }
     </style>
@@ -325,19 +359,19 @@
             <div class="tooltip">お天気</div>
         </a>
 
-        <!-- 7. ドラゴンレーダーマップ (New) -->
+        <!-- 7. ドラゴンレーダーマップ -->
         <a href="https://dragon-radar-nav.vercel.app" class="app-link" target="_blank" aria-label="ドラゴンレーダー">
             <i class="fa-solid fa-crosshairs"></i> <!-- Radar/Target Icon -->
             <div class="tooltip">レーダーマップ</div>
         </a>
 
-        <!-- 8. Coming Soon (New) -->
+        <!-- 8. Coming Soon -->
         <a href="#" class="app-link" target="_blank" aria-label="Coming Soon">
             <i class="fa-solid fa-lock"></i>
             <div class="tooltip">Coming Soon</div>
         </a>
 
-        <!-- 9. Coming Soon (New) -->
+        <!-- 9. Coming Soon -->
         <a href="#" class="app-link" target="_blank" aria-label="Coming Soon">
             <i class="fa-solid fa-lock"></i>
             <div class="tooltip">Coming Soon</div>
