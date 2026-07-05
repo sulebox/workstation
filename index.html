@@ -6,15 +6,25 @@
     <title>SULE WORKSTATION BOX</title>
     <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 共通テーマ (theme.css で一元管理 / theme.js が切り替え) -->
+    <link rel="stylesheet" href="theme.css">
+    <script src="theme.js"></script>
     <style>
-        /* --- CSS Variables for Mint Chocolate Theme --- */
+        /* テーマカラーは theme.css からエイリアス */
         :root {
-            --choco-dark: #3E2723;   /* Deep Chocolate */
-            --choco-light: #5D4037;  /* Lighter Chocolate */
-            --mint-main: #80CBC4;    /* Main Mint */
-            --mint-bright: #A7FFEB;  /* Bright Mint for highlights */
-            --mint-glow: rgba(167, 255, 235, 0.6);
-            --text-color: #3E2723;
+            --choco-dark: var(--theme-main);
+            --choco-light: var(--theme-text-sec);
+            --mint-main: var(--theme-accent);
+            --mint-bright: var(--theme-accent-bright);
+            --mint-glow: var(--theme-glow);
+        }
+
+        /* 共通テーマ切り替えUIの配置 (右上固定) */
+        .page-theme-switcher {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 20;
         }
 
         /* --- Global Reset & Layout --- */
@@ -314,6 +324,9 @@
 
     <!-- Night Overlay (Layer 2) -->
     <div id="night-overlay"></div>
+
+    <!-- Theme Switcher (共通コンポーネント: theme.js が生成) -->
+    <div class="page-theme-switcher" data-theme-switcher></div>
 
     <!-- Header / Title (Layer 3) -->
     <header>

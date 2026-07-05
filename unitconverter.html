@@ -18,6 +18,10 @@
     <!-- Google Fonts (Noto Sans JP & Inter) -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 
+    <!-- 共通テーマ (theme.css で一元管理 / theme.js が切り替え) -->
+    <link rel="stylesheet" href="theme.css">
+    <script src="theme.js"></script>
+
     <style>
         body {
             font-family: 'Inter', 'Noto Sans JP', sans-serif;
@@ -34,7 +38,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
 
         // --- アイコンコンポーネント (Lucide IconsのSVGを直接定義) ---
         const IconBase = ({ children, ...props }) => (
@@ -51,47 +55,15 @@
         const Check = (props) => <IconBase {...props}><path d="M20 6 9 17l-5-5" /></IconBase>;
         const ArrowDown = (props) => <IconBase {...props}><path d="M12 5v14" /><path d="m19 12-7 7-7-7" /></IconBase>;
         const ArrowRightLeft = (props) => <IconBase {...props}><path d="m16 3 4 4-4 4" /><path d="M20 7H4" /><path d="m8 21-4-4 4-4" /><path d="M4 17h16" /></IconBase>;
-        const Palette = (props) => <IconBase {...props}><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></IconBase>;
 
-
-        // --- カラーテーマ定義 ---
-        const THEMES = {
-            mint: {
-                id: 'mint',
-                name: 'チョコミント',
-                colors: {
-                    bgApp: '#E0F7FA',        // 全体の背景（薄いミント）
-                    chocoDark: '#4E342E',    // 濃いチョコ（ヘッダー等）
-                    accent: '#26C6DA',       // アクセント（鮮やかなミント）
-                    cardBg: '#FFFFFF',
-                    textChoco: '#3E2723',
-                    textWhite: '#FFFFFF',
-                }
-            },
-            banana: {
-                id: 'banana',
-                name: 'チョコバナナ',
-                colors: {
-                    bgApp: '#FFFDE7',        // 全体の背景（薄いクリーム）
-                    chocoDark: '#3E2723',    // 濃いチョコ（ヘッダー等）
-                    accent: '#FDD835',       // アクセント（鮮やかなバナナ色）
-                    cardBg: '#FFFFFF',
-                    textChoco: '#3E2723',
-                    textWhite: '#FFFFFF',
-                }
-            },
-            strawberry: {
-                id: 'strawberry',
-                name: 'ストロベリーチョコ',
-                colors: {
-                    bgApp: '#FCE4EC',        // 全体の背景（薄いピンク）
-                    chocoDark: '#3E2723',    // 濃いチョコ
-                    accent: '#EC407A',       // アクセント（鮮やかなストロベリー）
-                    cardBg: '#FFFFFF',
-                    textChoco: '#3E2723',
-                    textWhite: '#FFFFFF',
-                }
-            }
+        // --- カラーテーマ (theme.css の CSS変数で一元管理) ---
+        const T = {
+            bgApp: 'var(--theme-bg)',
+            chocoDark: 'var(--theme-main)',
+            accent: 'var(--theme-accent)',
+            cardBg: 'var(--theme-card)',
+            textChoco: 'var(--theme-main)',
+            textWhite: '#FFFFFF',
         };
 
         // --- データ定義 ---
@@ -140,15 +112,20 @@
         };
 
         function UnitConverter() {
-            const [theme, setTheme] = useState('mint');
             const [category, setCategory] = useState('pressure');
             const [inputValue, setInputValue] = useState(1);
             const [inputUnitId, setInputUnitId] = useState('');
             const [outputUnitId, setOutputUnitId] = useState('');
             const [copiedId, setCopiedId] = useState(null);
+            const themeSwitcherRef = useRef(null);
 
-            // 現在のテーマ色を取得
-            const currentTheme = THEMES[theme].colors;
+            // テーマ色は CSS変数参照 (切り替え時は CSS 側で自動反映)
+            const currentTheme = T;
+
+            // 共通テーマ切り替えUIをマウント
+            useEffect(() => {
+                window.SuleTheme.mountSwitcher(themeSwitcherRef.current);
+            }, []);
 
             // カテゴリ変更時の初期化
             useEffect(() => {
@@ -226,30 +203,8 @@
                                 Unit Converter
                             </h1>
 
-                            {/* カラーテーマ切り替えプルダウン */}
-                            <div className="flex justify-center items-center gap-2">
-                                <Palette className="w-5 h-5 opacity-70" />
-                                <div className="relative group">
-                                    <select
-                                        value={theme}
-                                        onChange={(e) => setTheme(e.target.value)}
-                                        className="appearance-none cursor-pointer pl-4 pr-8 py-2 rounded-full border-2 font-bold text-sm outline-none transition-all duration-300 hover:shadow-md"
-                                        style={{ 
-                                            backgroundColor: currentTheme.cardBg, 
-                                            borderColor: currentTheme.chocoDark, 
-                                            color: currentTheme.textChoco 
-                                        }}
-                                    >
-                                        {Object.values(THEMES).map((t) => (
-                                            <option key={t.id} value={t.id}>{t.name}</option>
-                                        ))}
-                                    </select>
-                                    {/* カスタム矢印 */}
-                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-60">
-                                        <ArrowDown className="w-4 h-4" />
-                                    </div>
-                                </div>
-                            </div>
+                            {/* カラーテーマ切り替え (共通コンポーネント: theme.js が生成) */}
+                            <div ref={themeSwitcherRef} className="flex justify-center"></div>
                         </header>
 
                         {/* カテゴリ選択タブ */}

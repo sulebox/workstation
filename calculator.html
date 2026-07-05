@@ -18,12 +18,29 @@
     <!-- Google Fonts (Optional for nice sans-serif) -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
 
+    <!-- 共通テーマ (theme.css で一元管理 / theme.js が切り替え) -->
+    <link rel="stylesheet" href="theme.css">
+    <script src="theme.js"></script>
+
     <style>
         body {
             font-family: 'Roboto', sans-serif;
             margin: 0;
             overflow: hidden; /* Prevent scrolling on mobile */
         }
+
+        /* テーマカラー (theme.css の --calc-* 変数) を適用するクラス */
+        .calc-bg { background-color: var(--calc-bg); }
+        .calc-display { color: var(--calc-display); }
+        .calc-preview { color: var(--calc-preview); }
+        .calc-btn-num { background-color: var(--calc-btn-num); color: var(--calc-text-num); }
+        .calc-btn-num:hover { background-color: var(--calc-btn-num-h); }
+        .calc-btn-op { background-color: var(--calc-btn-op); color: var(--calc-text-op); }
+        .calc-btn-op:hover { background-color: var(--calc-btn-op-h); }
+        .calc-btn-ac { background-color: var(--calc-btn-ac); color: var(--calc-text-ac); }
+        .calc-btn-ac:hover { background-color: var(--calc-btn-ac-h); }
+        .calc-btn-eq { background-color: var(--calc-btn-eq); color: var(--calc-text-eq); }
+        .calc-btn-eq:hover { background-color: var(--calc-btn-eq-h); }
         /* Custom scrollbar hiding */
         .scrollbar-hide::-webkit-scrollbar {
             display: none;
@@ -76,59 +93,17 @@
             const [input, setInput] = useState('');
             const [result, setResult] = useState('');
             const [history, setHistory] = useState([]);
-            const [currentTheme, setCurrentTheme] = useState('mint');
+            const [themeId, setThemeId] = useState(window.SuleTheme.get());
             const scrollRef = useRef(null);
+            const themeSwitcherRef = useRef(null);
 
-            // Themes Configuration
-            const themes = {
-                mint: {
-                    name: 'Mint Choco',
-                    bg: 'bg-[#2B1B17]', 
-                    display: 'text-[#40E0D0]', 
-                    preview: 'text-[#80CBC4]',
-                    btnNum: 'bg-[#3E2723] hover:bg-[#4E342E]', 
-                    btnOp: 'bg-[#006064] hover:bg-[#00838F]', 
-                    btnAc: 'bg-[#004D40] hover:bg-[#00695C]', 
-                    btnEq: 'bg-[#40E0D0] hover:bg-[#84FFFF]', 
-                    textNum: 'text-[#E0F2F1]', 
-                    textOp: 'text-[#80CBC4]',
-                    textAc: 'text-[#B2DFDB]',
-                    textEq: 'text-[#2B1B17]', 
-                    dot: 'bg-[#40E0D0]' 
-                },
-                banana: {
-                    name: 'Choco Banana',
-                    bg: 'bg-[#2B1B17]', 
-                    display: 'text-[#FFEA00]', 
-                    preview: 'text-[#FFF176]',
-                    btnNum: 'bg-[#3E2723] hover:bg-[#4E342E]', 
-                    btnOp: 'bg-[#F57F17] hover:bg-[#F9A825]', 
-                    btnAc: 'bg-[#E65100] hover:bg-[#EF6C00]', 
-                    btnEq: 'bg-[#FFEA00] hover:bg-[#FFFF00]', 
-                    textNum: 'text-[#FFF8E1]', 
-                    textOp: 'text-[#261C19]', 
-                    textAc: 'text-[#FFF3E0]',
-                    textEq: 'text-[#2B1B17]', 
-                    dot: 'bg-[#FFEA00]'
-                },
-                strawberry: {
-                    name: 'Strawberry Choco',
-                    bg: 'bg-[#2B1B17]', 
-                    display: 'text-[#FF2A68]', 
-                    preview: 'text-[#FF80AB]',
-                    btnNum: 'bg-[#3E2723] hover:bg-[#4E342E]', 
-                    btnOp: 'bg-[#C2185B] hover:bg-[#D81B60]', 
-                    btnAc: 'bg-[#880E4F] hover:bg-[#AD1457]', 
-                    btnEq: 'bg-[#FF2A68] hover:bg-[#FF4081]', 
-                    textNum: 'text-[#FCE4EC]', 
-                    textOp: 'text-[#F8BBD0]',
-                    textAc: 'text-[#F8BBD0]',
-                    textEq: 'text-[#FCE4EC]', 
-                    dot: 'bg-[#FF2A68]'
-                }
-            };
+            // テーマカラーは theme.css の --calc-* 変数で一元管理 (calc-* クラスで適用)
+            const themeLabel = (window.SuleTheme.themes.find(t => t.id === themeId) || {}).label || '';
 
-            const theme = themes[currentTheme];
+            useEffect(() => {
+                window.SuleTheme.mountSwitcher(themeSwitcherRef.current);
+                window.SuleTheme.onChange(setThemeId);
+            }, []);
 
             useEffect(() => {
                 if (scrollRef.current) {
@@ -211,15 +186,7 @@
             };
 
             const Button = ({ label, type = 'num' }) => {
-                let colorClass = '';
-                let textClass = '';
-                
-                switch (type) {
-                    case 'ac': colorClass = theme.btnAc; textClass = theme.textAc; break;
-                    case 'op': colorClass = theme.btnOp; textClass = theme.textOp; break;
-                    case 'eq': colorClass = theme.btnEq; textClass = theme.textEq; break;
-                    case 'num': default: colorClass = theme.btnNum; textClass = theme.textNum; break;
-                }
+                const colorClass = { ac: 'calc-btn-ac', op: 'calc-btn-op', eq: 'calc-btn-eq' }[type] || 'calc-btn-num';
 
                 const content = label === 'DEL' ? <IconDelete size={24} /> : label;
 
@@ -227,7 +194,7 @@
                     <button
                         onClick={() => handleClick(label === 'DEL' ? 'DEL' : label)}
                         className={`
-                            ${colorClass} ${textClass} 
+                            ${colorClass}
                             rounded-full aspect-square
                             w-full h-full
                             flex items-center justify-center 
@@ -243,13 +210,13 @@
             };
 
             return (
-                <div className={`min-h-screen w-full ${theme.bg} flex items-center justify-center p-4 transition-colors duration-500`}>
+                <div className="min-h-screen w-full calc-bg flex items-center justify-center p-4 transition-colors duration-500">
                     <div className={`w-full max-w-[360px] h-[800px] max-h-[90vh] flex flex-col relative overflow-hidden rounded-[32px] border border-[#3E2723] shadow-2xl shadow-black/50 transition-colors duration-500`}>
                         
                         {/* Top Bar */}
-                        <div className={`flex justify-between items-center p-4 ${theme.display} opacity-70`}>
+                        <div className="flex justify-between items-center p-4 calc-display opacity-70">
                             <IconHistory size={20} className="cursor-pointer hover:text-white transition-colors" />
-                            <span className="text-xs tracking-widest opacity-50 uppercase font-bold">{theme.name}</span>
+                            <span className="text-xs tracking-widest opacity-50 uppercase font-bold">{themeLabel}</span>
                             <IconMoreVertical size={20} className="cursor-pointer hover:text-white transition-colors" />
                         </div>
 
@@ -257,7 +224,7 @@
                         <div className="flex-1 flex flex-col justify-end items-end p-6 pb-2 space-y-2">
                             {/* Realtime Preview */}
                             {result && result !== input && (
-                                <div className={`text-2xl ${theme.preview} opacity-70 font-light tracking-wide truncate w-full text-right transition-colors duration-300`}>
+                                <div className="text-2xl calc-preview opacity-70 font-light tracking-wide truncate w-full text-right transition-colors duration-300">
                                     {result}
                                 </div>
                             )}
@@ -266,7 +233,7 @@
                             <div 
                                 ref={scrollRef}
                                 className={`
-                                    w-full text-right ${theme.display} overflow-x-auto scrollbar-hide whitespace-nowrap
+                                    w-full text-right calc-display overflow-x-auto scrollbar-hide whitespace-nowrap
                                     ${input.length > 10 ? 'text-5xl' : 'text-7xl'} font-light tracking-tight drop-shadow-md transition-colors duration-300
                                 `}
                             >
@@ -274,27 +241,10 @@
                             </div>
                         </div>
 
-                        {/* Actions Bar (Theme Switcher) */}
+                        {/* Actions Bar (共通テーマ切り替え: theme.js が生成) */}
                         <div className="px-6 py-2 flex justify-between items-center">
-                            <div className="flex items-center gap-3 bg-black/20 p-1.5 rounded-full backdrop-blur-sm">
-                                {/* Theme Dots */}
-                                <button 
-                                    onClick={() => setCurrentTheme('mint')}
-                                    className={`w-4 h-4 rounded-full bg-[#40E0D0] ring-2 ring-offset-2 ring-offset-[#2B1B17] transition-all cursor-pointer ${currentTheme === 'mint' ? 'ring-[#40E0D0] scale-110' : 'ring-transparent opacity-50 hover:opacity-100'}`}
-                                    title="Mint Choco"
-                                ></button>
-                                <button 
-                                    onClick={() => setCurrentTheme('banana')}
-                                    className={`w-4 h-4 rounded-full bg-[#FFEA00] ring-2 ring-offset-2 ring-offset-[#2B1B17] transition-all cursor-pointer ${currentTheme === 'banana' ? 'ring-[#FFEA00] scale-110' : 'ring-transparent opacity-50 hover:opacity-100'}`}
-                                    title="Choco Banana"
-                                ></button>
-                                <button 
-                                    onClick={() => setCurrentTheme('strawberry')}
-                                    className={`w-4 h-4 rounded-full bg-[#FF2A68] ring-2 ring-offset-2 ring-offset-[#2B1B17] transition-all cursor-pointer ${currentTheme === 'strawberry' ? 'ring-[#FF2A68] scale-110' : 'ring-transparent opacity-50 hover:opacity-100'}`}
-                                    title="Strawberry Choco"
-                                ></button>
-                            </div>
-                            <IconChevronDown size={20} className={`${theme.display} opacity-50`} />
+                            <div ref={themeSwitcherRef}></div>
+                            <IconChevronDown size={20} className="calc-display opacity-50" />
                         </div>
 
                         {/* Keypad Area */}
