@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>翻訳 — SULE WORKSTATION BOX</title>
+    <meta name="theme-color" content="#3B2420">
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+    <link rel="stylesheet" href="assets/css/app.css">
+    <script src="assets/js/core.js"></script>
+    <script src="assets/js/expr.js" defer></script>
+    <style>
+        .status { display: inline-flex; }
+        .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+        .toolbar .select { width: auto; min-width: 210px; height: 42px; font-size: 14px; }
+        .direction {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-family: var(--font-ui);
+            font-weight: 900;
+            font-size: 14px;
+            color: var(--ink-2);
+            padding: 0 4px;
+        }
+        .direction svg { color: var(--accent-ink); width: 16px; height: 16px; }
+
+        .panes { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        @media (max-width: 860px) { .panes { grid-template-columns: 1fr; } }
+        .pane { display: flex; flex-direction: column; min-height: 340px; overflow: hidden; }
+        .pane__body { flex: 1; display: flex; position: relative; }
+        .pane__foot {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px 12px 16px;
+            border-top: 1px solid var(--line);
+            flex-wrap: wrap;
+        }
+        .src {
+            flex: 1;
+            border: 0;
+            background: transparent;
+            resize: none;
+            padding: 18px 20px;
+            font-size: 16px;
+            line-height: 1.8;
+            color: var(--ink);
+            min-height: 280px;
+            outline: none;
+        }
+        .src::placeholder { color: var(--ink-3); }
+        .count { font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); }
+        .count.is-over { color: var(--bad); font-weight: 700; }
+
+        .pane--out { background: var(--choco); color: var(--on-choco); border-color: transparent; }
+        html[data-mode="night"] .pane--out {
+            background: color-mix(in srgb, var(--accent) 5%, #1D120E);
+            border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+        }
+        .pane--out .pane__foot { border-top-color: rgba(255, 255, 255, .08); }
+        .out {
+            flex: 1;
+            padding: 18px 20px;
+            font-size: 16px;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            min-height: 280px;
+        }
+        .out:empty::before { content: attr(data-placeholder); color: color-mix(in srgb, var(--on-choco) 40%, transparent); }
+        .out.is-streaming::after {
+            content: "";
+            display: inline-block;
+            width: .55em;
+            height: 1.1em;
+            margin-left: 2px;
+            vertical-align: -.2em;
+            border-radius: 2px;
+            background: var(--accent);
+            animation: caret 1s steps(1) infinite;
+        }
+        @keyframes caret { 50% { opacity: 0; } }
+        .out.is-error { color: #FFB4A8; }
+        .pane--out .btn--ghost { color: color-mix(in srgb, var(--on-choco) 75%, transparent); border-color: rgba(255, 255, 255, .16); }
+        .pane--out .btn--ghost:hover { color: var(--on-choco); border-color: var(--accent); }
+        .usage { font-family: var(--font-mono); font-size: 11.5px; color: color-mix(in srgb, var(--on-choco) 45%, transparent); }
+
+        .thinking { display: inline-flex; gap: 5px; align-items: center; padding: 18px 20px; position: absolute; top: 0; left: 0; }
+        .thinking i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: bounce 1s infinite ease-in-out; }
+        .thinking i:nth-child(2) { animation-delay: .15s; }
+        .thinking i:nth-child(3) { animation-delay: .3s; }
+        @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); opacity: .4; } 40% { transform: translateY(-6px); opacity: 1; } }
+
+        .setup { margin-bottom: 14px; }
+        .setup code { font-family: var(--font-mono); font-size: 12px; background: var(--surface); padding: 1px 6px; border-radius: 6px; }
+        .passcode { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+        .passcode .input { height: 38px; width: 220px; font-size: 14px; }
+
+        .hist-list { list-style: none; margin: 0; padding: 4px 8px 10px; display: grid; gap: 2px; }
+        .hist-item {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 12px;
+            align-items: center;
+            width: 100%;
+            text-align: left;
+            border: 0;
+            background: transparent;
+            border-radius: 12px;
+            padding: 10px 12px;
+            color: var(--ink);
+            font-size: 13.5px;
+        }
+        .hist-item:hover { background: var(--accent-wash); }
+        .hist-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .hist-item span:last-child { color: var(--ink-2); }
+        .hist-item svg { color: var(--ink-3); width: 14px; height: 14px; }
+        @media (max-width: 600px) {
+            .hist-item { grid-template-columns: 1fr; gap: 2px; }
+            .hist-item svg { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <header data-swb-header data-tool="translate"></header>
+
+    <main class="page">
+        <div class="page-head rise">
+            <div class="page-head__icon" data-icon="languages"></div>
+            <div>
+                <h1>翻訳</h1>
+                <p>Claude Haiku 5.5 ・ <span class="kbd" id="kbd-mod">⌘</span><span class="kbd">↵</span> で翻訳</p>
+            </div>
+            <div class="page-head__aside"><span class="badge" id="status">確認中…</span></div>
+        </div>
+
+        <div class="note setup" id="setup" hidden></div>
+
+        <div class="toolbar rise">
+            <select class="select" id="target" aria-label="翻訳先の言語">
+                <option value="auto">自動（日本語 ⇄ English）</option>
+                <option value="en">English</option>
+                <option value="ja">日本語</option>
+                <option value="zh-Hans">简体中文</option>
+                <option value="zh-Hant">繁體中文</option>
+                <option value="ko">한국어</option>
+                <option value="fr">Français</option>
+                <option value="de">Deutsch</option>
+                <option value="es">Español</option>
+                <option value="it">Italiano</option>
+                <option value="pt">Português</option>
+                <option value="vi">Tiếng Việt</option>
+                <option value="th">ไทย</option>
+                <option value="id">Bahasa Indonesia</option>
+            </select>
+            <div class="seg" id="tone" role="group" aria-label="トーン">
+                <button type="button" data-tone="natural">自然</button>
+                <button type="button" data-tone="polite">ていねい</button>
+                <button type="button" data-tone="casual">カジュアル</button>
+                <button type="button" data-tone="tech">技術文書</button>
+            </div>
+            <span class="direction" id="direction"></span>
+        </div>
+
+        <div class="panes rise">
+            <section class="card pane" aria-label="原文">
+                <div class="pane__body">
+                    <textarea class="src" id="src" placeholder="翻訳したい文章を入力・貼り付け&#10;&#10;データシートの一節、海外フォーラムの質問、note 記事の英訳など" spellcheck="false"></textarea>
+                </div>
+                <div class="pane__foot">
+                    <span class="count" id="count">0</span>
+                    <span class="spacer"></span>
+                    <button type="button" class="btn btn--ghost btn--sm" id="clear"><span data-icon="x"></span>クリア</button>
+                    <button type="button" class="btn btn--accent btn--sm" id="go"><span data-icon="sparkles"></span>翻訳</button>
+                </div>
+            </section>
+
+            <section class="card pane pane--out" aria-label="訳文">
+                <div class="pane__body">
+                    <div class="out" id="out" aria-live="polite" data-placeholder="ここに訳文がストリーミングで表示されます"></div>
+                    <div class="thinking" id="thinking" hidden><i></i><i></i><i></i></div>
+                </div>
+                <div class="pane__foot">
+                    <span class="usage" id="usage"></span>
+                    <span class="spacer"></span>
+                    <button type="button" class="btn btn--ghost btn--sm" id="stop" hidden><span data-icon="stop"></span>停止</button>
+                    <button type="button" class="btn btn--ghost btn--sm" id="reuse" title="訳文を原文に入れて逆方向に"><span data-icon="swapH"></span>入れ替え</button>
+                    <button type="button" class="btn btn--ghost btn--sm" id="copy"><span data-icon="copy"></span>コピー</button>
+                </div>
+            </section>
+        </div>
+
+        <section class="card rise" style="margin-top:16px" aria-labelledby="th-title">
+            <div class="card__head">
+                <h2 id="th-title"><span data-icon="history"></span>最近の翻訳</h2>
+                <span class="spacer"></span>
+                <button type="button" class="btn btn--ghost btn--sm" id="hist-clear"><span data-icon="trash"></span>消去</button>
+            </div>
+            <ul class="hist-list" id="hist"></ul>
+        </section>
+    </main>
+
+    <script>
+        (function () {
+            const $ = id => document.getElementById(id);
+            const MAX = 8000;
+            const LANG_LABEL = { ja: '日本語', en: 'English', 'zh-Hans': '简体中文', 'zh-Hant': '繁體中文', ko: '한국어', fr: 'Français', de: 'Deutsch', es: 'Español', it: 'Italiano', pt: 'Português', vi: 'Tiếng Việt', th: 'ไทย', id: 'Bahasa Indonesia' };
+
+            const saved = SWB.store.get('swb-translate', {});
+            const state = {
+                target: saved.target || 'auto',
+                tone: saved.tone || 'natural',
+                history: Array.isArray(saved.history) ? saved.history : [],
+                passcode: saved.passcode || '',
+                busy: false,
+                ctrl: null,
+                passcodeRequired: false
+            };
+            const save = () => SWB.store.set('swb-translate', { target: state.target, tone: state.tone, history: state.history, passcode: state.passcode });
+
+            const src = $('src'), out = $('out');
+            if (!SWB.isMac) $('kbd-mod').textContent = 'Ctrl';
+
+            // ---- 言語の自動判定 (日本語が含まれていれば英語へ、それ以外は日本語へ) ----
+            function looksJapanese(text) {
+                const letters = text.replace(/[\s\d\p{P}\p{S}]/gu, '');
+                if (!letters) return false;
+                const ja = (letters.match(/[぀-ヿ㐀-鿿ｦ-ﾟ]/g) || []).length;
+                return ja / letters.length > 0.15;
+            }
+            function resolveTarget() {
+                if (state.target !== 'auto') return state.target;
+                return looksJapanese(src.value) ? 'en' : 'ja';
+            }
+            function renderDirection() {
+                const has = !!src.value.trim();
+                let html;
+                if (state.target === 'auto' && !has) {
+                    html = '<span>日本語</span>' + SWB.icon('swapH') + '<span>English</span>';
+                } else {
+                    const t = resolveTarget();
+                    const from = state.target === 'auto' ? (t === 'en' ? '日本語' : '英語など') : '自動判定';
+                    html = (has ? '<span>' + from + '</span>' : '') + SWB.icon('arrowRight') + '<span>' + LANG_LABEL[t] + '</span>';
+                }
+                $('direction').innerHTML = html;
+            }
+
+            // ---- コントロール ----
+            $('target').value = state.target;
+            $('target').addEventListener('change', () => { state.target = $('target').value; save(); renderDirection(); });
+            function syncTone() { $('tone').querySelectorAll('[data-tone]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tone === state.tone))); }
+            $('tone').addEventListener('click', e => {
+                const b = e.target.closest('[data-tone]');
+                if (!b) return;
+                state.tone = b.dataset.tone;
+                save();
+                syncTone();
+            });
+
+            function renderCount() {
+                const n = src.value.length;
+                $('count').textContent = n.toLocaleString() + ' / ' + MAX.toLocaleString();
+                $('count').classList.toggle('is-over', n > MAX);
+            }
+            src.addEventListener('input', () => { renderCount(); renderDirection(); });
+            src.addEventListener('keydown', e => {
+                if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); translate(); }
+            });
+            $('go').addEventListener('click', translate);
+            $('clear').addEventListener('click', () => { src.value = ''; out.textContent = ''; $('usage').textContent = ''; renderCount(); renderDirection(); src.focus(); });
+            $('stop').addEventListener('click', () => { if (state.ctrl) state.ctrl.abort(); });
+            $('copy').addEventListener('click', () => { if (out.textContent && !out.classList.contains('is-error')) SWB.copy(out.textContent, '訳文'); });
+            $('reuse').addEventListener('click', () => {
+                if (!out.textContent || out.classList.contains('is-error')) return;
+                const prevSrc = src.value;
+                src.value = out.textContent;
+                out.textContent = prevSrc;
+                renderCount();
+                renderDirection();
+                src.focus();
+            });
+
+            // ---- 設定状態の確認 ----
+            function setStatus(text, kind) {
+                const el = $('status');
+                el.textContent = text;
+                el.className = 'badge' + (kind ? ' badge--' + kind : '');
+            }
+            function showSetup(html) {
+                const el = $('setup');
+                el.innerHTML = SWB.icon('info') + '<div>' + html + '</div>';
+                el.hidden = false;
+            }
+            async function checkStatus() {
+                try {
+                    const res = await fetch('/api/translate', { headers: { Accept: 'application/json' } });
+                    if (!res.ok) throw new Error(String(res.status));
+                    const info = await res.json();
+                    state.passcodeRequired = info.passcode;
+                    if (!info.configured) {
+                        setStatus('API キー未設定', 'warn');
+                        showSetup('<b>Claude API キーがまだ設定されていません。</b><br>' +
+                            'ローカル: プロジェクト直下の <code>.env</code> に <code>ANTHROPIC_API_KEY=sk-ant-…</code> を書いて <code>npm run dev</code> を再起動。<br>' +
+                            'Vercel: Project Settings → Environment Variables に <code>ANTHROPIC_API_KEY</code> を追加して再デプロイ。');
+                    } else if (info.passcode && !state.passcode) {
+                        setStatus('パスコードが必要', 'warn');
+                        askPasscode();
+                    } else {
+                        setStatus('Haiku 5.5 準備OK', 'ok');
+                    }
+                } catch (e) {
+                    setStatus('API に接続できません', 'bad');
+                    showSetup('<b>翻訳 API (/api/translate) に届きません。</b><br>ファイルを直接開いている場合は、ターミナルで <code>npm run dev</code> を実行して http://localhost:3000 から開いてください。');
+                }
+            }
+            function askPasscode(message) {
+                showSetup('<b>' + (message || 'このサイトの翻訳にはパスコードが必要です。') + '</b>' +
+                    '<div class="passcode"><input class="input" id="pass" type="password" placeholder="パスコード" autocomplete="current-password"><button type="button" class="btn btn--sm" id="pass-save">保存</button></div>');
+                const input = $('pass');
+                const commit = () => {
+                    state.passcode = input.value;
+                    save();
+                    $('setup').hidden = true;
+                    setStatus('Haiku 5.5 準備OK', 'ok');
+                    if (src.value.trim()) translate();
+                };
+                $('pass-save').addEventListener('click', commit);
+                input.addEventListener('keydown', e => { if (e.key === 'Enter') commit(); });
+            }
+
+            // ---- 翻訳 (NDJSON ストリーム) ----
+            function setBusy(busy) {
+                state.busy = busy;
+                $('go').disabled = busy;
+                $('stop').hidden = !busy;
+                $('reuse').hidden = busy;
+                $('copy').hidden = busy;
+                out.classList.toggle('is-streaming', busy);
+            }
+
+            async function translate() {
+                const text = src.value.trim();
+                if (!text || state.busy) return;
+                if (text.length > MAX) { SWB.toast(MAX.toLocaleString() + ' 文字までです', 'info'); return; }
+                const target = resolveTarget();
+                out.textContent = '';
+                out.classList.remove('is-error');
+                $('usage').textContent = '';
+                $('thinking').hidden = false;
+                setBusy(true);
+                state.ctrl = new AbortController();
+                let gotText = false;
+                try {
+                    const res = await fetch('/api/translate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'x-swb-passcode': state.passcode },
+                        body: JSON.stringify({ text, target, tone: state.tone }),
+                        signal: state.ctrl.signal
+                    });
+                    if (!res.ok) {
+                        const err = await res.json().catch(() => ({}));
+                        if (err.error === 'passcode_required') {
+                            state.passcode = '';
+                            save();
+                            askPasscode(state.passcodeRequired ? 'パスコードが違うようです。' : undefined);
+                        }
+                        throw new Error(err.message || 'エラー (' + res.status + ')');
+                    }
+                    const reader = res.body.getReader();
+                    const decoder = new TextDecoder();
+                    let buf = '';
+                    for (;;) {
+                        const { value, done } = await reader.read();
+                        if (done) break;
+                        buf += decoder.decode(value, { stream: true });
+                        let nl;
+                        while ((nl = buf.indexOf('\n')) >= 0) {
+                            const line = buf.slice(0, nl).trim();
+                            buf = buf.slice(nl + 1);
+                            if (!line) continue;
+                            const ev = JSON.parse(line);
+                            if (ev.t === 'delta') {
+                                if (!gotText) { $('thinking').hidden = true; gotText = true; }
+                                out.textContent += ev.v;
+                            } else if (ev.t === 'done') {
+                                $('usage').textContent = 'in ' + ev.usage.input + ' / out ' + ev.usage.output + ' tokens';
+                                if (ev.stop === 'max_tokens') SWB.toast('長すぎて途中で止まりました', 'info');
+                            } else if (ev.t === 'error') {
+                                throw new Error(ev.message);
+                            }
+                        }
+                    }
+                    if (out.textContent.trim()) addHistory(text, out.textContent.trim(), target);
+                } catch (err) {
+                    if (err.name === 'AbortError') {
+                        SWB.toast('停止しました', 'stop');
+                    } else {
+                        out.classList.add('is-error');
+                        out.textContent = err.message || '翻訳できませんでした';
+                    }
+                } finally {
+                    $('thinking').hidden = true;
+                    setBusy(false);
+                    state.ctrl = null;
+                }
+            }
+
+            // ---- 履歴 ----
+            function addHistory(s, t, target) {
+                state.history = [{ s, t, target, at: Date.now() }].concat(state.history.filter(h => h.s !== s)).slice(0, 30);
+                save();
+                renderHistory();
+            }
+            function renderHistory() {
+                const list = $('hist');
+                if (!state.history.length) {
+                    list.innerHTML = '<li class="faint small" style="padding:14px 12px">まだありません</li>';
+                    return;
+                }
+                list.innerHTML = state.history.map((h, i) =>
+                    '<li><button type="button" class="hist-item" data-i="' + i + '"><span></span>' + SWB.icon('arrowRight') + '<span></span></button></li>'
+                ).join('');
+                list.querySelectorAll('.hist-item').forEach((b, i) => {
+                    const spans = b.querySelectorAll('span');
+                    spans[0].textContent = state.history[i].s.replace(/\s+/g, ' ');
+                    spans[1].textContent = state.history[i].t.replace(/\s+/g, ' ');
+                });
+            }
+            $('hist').addEventListener('click', e => {
+                const b = e.target.closest('[data-i]');
+                if (!b || state.busy) return;
+                const h = state.history[Number(b.dataset.i)];
+                src.value = h.s;
+                out.textContent = h.t;
+                out.classList.remove('is-error');
+                $('usage').textContent = '';
+                renderCount();
+                renderDirection();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+            $('hist-clear').addEventListener('click', () => {
+                state.history = [];
+                save();
+                renderHistory();
+                SWB.toast('履歴を消去しました', 'trash');
+            });
+
+            // ---- 初期化 ----
+            const q = SWB.params.get('text');
+            if (q) src.value = q;
+            syncTone();
+            renderCount();
+            renderDirection();
+            renderHistory();
+            checkStatus().then(() => {
+                if (q && $('setup').hidden) translate();
+            });
+            src.focus();
+        })();
+    </script>
+</body>
+</html>

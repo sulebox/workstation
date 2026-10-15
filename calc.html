@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>電卓 — SULE WORKSTATION BOX</title>
+    <meta name="theme-color" content="#3B2420">
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+    <link rel="stylesheet" href="assets/css/app.css">
+    <script src="assets/js/core.js"></script>
+    <script src="assets/js/expr.js"></script>
+    <style>
+        .calc-layout { display: grid; grid-template-columns: minmax(0, 440px) minmax(0, 1fr); gap: 16px; align-items: start; justify-content: center; }
+        @media (max-width: 860px) { .calc-layout { grid-template-columns: 1fr; max-width: 460px; margin: 0 auto; } }
+
+        .calc { padding: 18px; border-radius: 30px; }
+        .calc__bar { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+        .calc__bar .seg { background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .08); }
+        .calc__bar .seg button { padding: 4px 10px; font-size: 12px; color: color-mix(in srgb, var(--on-choco) 70%, transparent); }
+        .calc__bar .seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+        .mini-btn {
+            height: 30px;
+            padding: 0 10px;
+            border-radius: 9px;
+            border: 1px solid rgba(255, 255, 255, .1);
+            background: transparent;
+            color: color-mix(in srgb, var(--on-choco) 70%, transparent);
+            font-family: var(--font-ui);
+            font-weight: 700;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .mini-btn:hover { color: var(--on-choco); border-color: rgba(255, 255, 255, .25); }
+        .mini-btn[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+        .mini-btn svg { width: 14px; height: 14px; }
+
+        .screen {
+            padding: 14px 6px 10px;
+            min-height: 132px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            gap: 4px;
+        }
+        .screen__expr {
+            width: 100%;
+            border: 0;
+            background: transparent;
+            color: var(--on-choco);
+            text-align: right;
+            font-family: var(--font-mono);
+            font-weight: 500;
+            font-size: 40px;
+            letter-spacing: -.02em;
+            padding: 0;
+            outline: none;
+            caret-color: var(--accent);
+        }
+        .screen__expr.is-long { font-size: 28px; }
+        .screen__expr::placeholder { color: color-mix(in srgb, var(--on-choco) 35%, transparent); }
+        .screen__result {
+            min-height: 30px;
+            text-align: right;
+            font-family: var(--font-mono);
+            font-size: 22px;
+            color: var(--accent);
+            border: 0;
+            background: none;
+            padding: 0;
+            cursor: copy;
+            overflow-wrap: anywhere;
+        }
+        .screen__result.is-error { color: #FF9B8F; font-family: var(--font-ui); font-size: 14px; font-weight: 700; cursor: default; }
+        .screen__result:empty::before { content: "\00a0"; }
+
+        .keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
+        .keys + .keys { margin-top: 9px; }
+        .key {
+            height: 62px;
+            border-radius: 20px;
+            border: 0;
+            background: rgba(255, 255, 255, .07);
+            color: var(--on-choco);
+            font-family: var(--font-mono);
+            font-weight: 500;
+            font-size: 24px;
+            display: grid;
+            place-items: center;
+            box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .25), inset 0 1px 0 rgba(255, 255, 255, .06);
+            transition: transform .1s var(--ease), background-color .15s, filter .15s;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        .key:hover { background: rgba(255, 255, 255, .12); }
+        .key:active, .key.is-pressed { transform: scale(.93); filter: brightness(1.2); }
+        .key svg { width: 24px; height: 24px; }
+        .key--op { background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--accent); font-family: var(--font-body); font-weight: 500; font-size: 28px; }
+        .key--op:hover { background: color-mix(in srgb, var(--accent) 32%, transparent); }
+        .key--fn { font-family: var(--font-ui); font-weight: 700; font-size: 16px; color: color-mix(in srgb, var(--on-choco) 80%, transparent); background: rgba(255, 255, 255, .04); height: 48px; border-radius: 16px; }
+        .key--ac { font-family: var(--font-ui); font-weight: 900; font-size: 19px; color: #FFB4A8; }
+        .key--eq { background: var(--accent); color: var(--on-accent); font-size: 30px; font-weight: 700; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .2), 0 8px 22px -8px var(--glow); }
+        .key--eq:hover { background: var(--accent); filter: brightness(1.08); }
+        .sci[hidden] { display: none; }
+
+        .hist { max-height: calc(100vh - 220px); display: flex; flex-direction: column; }
+        .hist__list { list-style: none; margin: 0; padding: 4px 10px 14px; overflow-y: auto; }
+        .hist__item {
+            display: block;
+            width: 100%;
+            text-align: right;
+            border: 0;
+            background: transparent;
+            border-radius: 14px;
+            padding: 10px 12px;
+            color: var(--ink);
+        }
+        .hist__item:hover { background: var(--accent-wash); }
+        .hist__expr { display: block; font-family: var(--font-mono); font-size: 13px; color: var(--ink-3); overflow-wrap: anywhere; }
+        .hist__res { display: block; font-family: var(--font-mono); font-weight: 700; font-size: 20px; overflow-wrap: anywhere; }
+        .hist__empty { padding: 30px 16px; text-align: center; color: var(--ink-3); font-size: 13px; }
+        .kbd-help { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 14px 20px; border-top: 1px solid var(--line); font-size: 12px; color: var(--ink-3); }
+        .kbd-help span { display: inline-flex; gap: 4px; align-items: center; }
+        @media (hover: none) { .kbd-help { display: none; } }
+    </style>
+</head>
+<body>
+    <header data-swb-header data-tool="calc"></header>
+
+    <main class="page">
+        <div class="page-head rise">
+            <div class="page-head__icon" data-icon="calc"></div>
+            <div>
+                <h1>電卓</h1>
+                <p>キーボードでそのまま打てます。式の途中でも答えをプレビュー</p>
+            </div>
+        </div>
+
+        <div class="calc-layout">
+            <section class="card card--choco calc rise" aria-label="電卓">
+                <div class="calc__bar">
+                    <div class="seg" role="group" aria-label="角度の単位">
+                        <button type="button" data-angle="deg">DEG</button>
+                        <button type="button" data-angle="rad">RAD</button>
+                    </div>
+                    <button type="button" class="mini-btn" id="sci-toggle" aria-pressed="false">ƒx 関数</button>
+                    <span class="spacer"></span>
+                    <button type="button" class="mini-btn" id="copy-btn" title="結果をコピー"></button>
+                </div>
+
+                <div class="screen">
+                    <input class="screen__expr" id="expr" type="text" inputmode="none" autocomplete="off" spellcheck="false" placeholder="0" aria-label="式">
+                    <button type="button" class="screen__result" id="result" aria-live="polite" title="クリックでコピー"></button>
+                </div>
+
+                <div class="keys sci" id="sci" hidden>
+                    <button type="button" class="key key--fn" data-k="sin(">sin</button>
+                    <button type="button" class="key key--fn" data-k="cos(">cos</button>
+                    <button type="button" class="key key--fn" data-k="tan(">tan</button>
+                    <button type="button" class="key key--fn" data-k="π">π</button>
+                    <button type="button" class="key key--fn" data-k="√(">√</button>
+                    <button type="button" class="key key--fn" data-k="^2">x²</button>
+                    <button type="button" class="key key--fn" data-k="^">xʸ</button>
+                    <button type="button" class="key key--fn" data-k="log(">log</button>
+                    <button type="button" class="key key--fn" data-k="ln(">ln</button>
+                    <button type="button" class="key key--fn" data-k="(">(</button>
+                    <button type="button" class="key key--fn" data-k=")">)</button>
+                    <button type="button" class="key key--fn" data-k="ans">ans</button>
+                </div>
+
+                <div class="keys" id="keys">
+                    <button type="button" class="key key--ac" data-k="AC">AC</button>
+                    <button type="button" class="key key--op" data-k="()">( )</button>
+                    <button type="button" class="key key--op" data-k="%">%</button>
+                    <button type="button" class="key key--op" data-k="÷">÷</button>
+                    <button type="button" class="key" data-k="7">7</button>
+                    <button type="button" class="key" data-k="8">8</button>
+                    <button type="button" class="key" data-k="9">9</button>
+                    <button type="button" class="key key--op" data-k="×">×</button>
+                    <button type="button" class="key" data-k="4">4</button>
+                    <button type="button" class="key" data-k="5">5</button>
+                    <button type="button" class="key" data-k="6">6</button>
+                    <button type="button" class="key key--op" data-k="−">−</button>
+                    <button type="button" class="key" data-k="1">1</button>
+                    <button type="button" class="key" data-k="2">2</button>
+                    <button type="button" class="key" data-k="3">3</button>
+                    <button type="button" class="key key--op" data-k="+">+</button>
+                    <button type="button" class="key" data-k="0">0</button>
+                    <button type="button" class="key" data-k=".">.</button>
+                    <button type="button" class="key" data-k="DEL" aria-label="1文字消す"></button>
+                    <button type="button" class="key key--eq" data-k="=">=</button>
+                </div>
+            </section>
+
+            <section class="card hist rise" aria-labelledby="hist-title">
+                <div class="card__head">
+                    <h2 id="hist-title"><span data-icon="history"></span>履歴</h2>
+                    <span class="spacer"></span>
+                    <button type="button" class="btn btn--ghost btn--sm" id="hist-clear"><span data-icon="trash"></span>消去</button>
+                </div>
+                <ul class="hist__list" id="hist"></ul>
+                <div class="kbd-help">
+                    <span><span class="kbd">Enter</span>計算</span>
+                    <span><span class="kbd">Esc</span>クリア</span>
+                    <span><span class="kbd">^</span>べき乗</span>
+                    <span><span class="kbd">⌫</span>1文字消す</span>
+                    <span>履歴クリックで呼び出し</span>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script>
+        (function () {
+            const $ = id => document.getElementById(id);
+            const exprEl = $('expr');
+            const resultEl = $('result');
+            const OPS = ['+', '−', '×', '÷', '^'];
+
+            const saved = SWB.store.get('swb-calc', {});
+            const state = {
+                angle: saved.angle === 'rad' ? 'rad' : 'deg',
+                sci: !!saved.sci,
+                history: Array.isArray(saved.history) ? saved.history.slice(0, 100) : [],
+                ans: typeof saved.ans === 'number' ? saved.ans : undefined,
+                justEvaluated: false
+            };
+            const save = () => SWB.store.set('swb-calc', { angle: state.angle, sci: state.sci, history: state.history, ans: state.ans });
+
+            document.querySelector('[data-k="DEL"]').innerHTML = SWB.icon('backspace');
+            $('copy-btn').innerHTML = SWB.icon('copy') + 'コピー';
+
+            function evaluate(text, lenient) {
+                return SWB.expr.evaluate(text, { angle: state.angle, vars: { ans: state.ans }, lenient });
+            }
+            const show = v => SWB.fmt(v, 12);
+            const raw = v => SWB.fmt(v, 12, { group: false });
+
+            function refresh() {
+                const text = exprEl.value;
+                exprEl.classList.toggle('is-long', text.length > 14);
+                resultEl.classList.remove('is-error');
+                if (!text.trim() || state.justEvaluated) {
+                    resultEl.textContent = '';
+                    return;
+                }
+                const r = evaluate(text, true);
+                const plainNumber = /^-?[\d.]+$/.test(text.replace(/,/g, ''));
+                resultEl.textContent = r.ok && !plainNumber ? '= ' + show(r.value) : '';
+            }
+
+            function setExpr(text) {
+                exprEl.value = text;
+                exprEl.scrollLeft = exprEl.scrollWidth;
+                refresh();
+            }
+
+            function insert(k) {
+                let text = exprEl.value;
+                if (state.justEvaluated) {
+                    // 結果のあとに演算子 → 続けて計算、数字 → 新しい式
+                    const continues = OPS.includes(k) || k === '%' || k === '^2';
+                    if (!continues) text = '';
+                    state.justEvaluated = false;
+                }
+                if (k === '()') {
+                    const open = (text.match(/\(/g) || []).length;
+                    const close = (text.match(/\)/g) || []).length;
+                    k = open > close && /[\d)πe%]$/.test(text) ? ')' : '(';
+                }
+                if (OPS.includes(k) && OPS.includes(text.slice(-1))) {
+                    // 演算子の連打は置き換え (ただし ×− や ÷− のような負号は許可)
+                    if (!(k === '−' && ['×', '÷', '^'].includes(text.slice(-1)))) text = text.slice(0, -1);
+                }
+                if (k === '.') {
+                    const lastNum = text.split(/[^\d.]/).pop();
+                    if (lastNum.includes('.')) return;
+                    if (!lastNum) k = '0.';
+                }
+                setExpr(text + k);
+            }
+
+            function evaluateNow() {
+                const text = exprEl.value.trim();
+                if (!text) return;
+                const r = evaluate(text, false);
+                if (!r.ok) {
+                    resultEl.classList.add('is-error');
+                    resultEl.textContent = r.error || '計算できません';
+                    return;
+                }
+                state.ans = r.value;
+                state.history.unshift({ e: text, r: r.value, t: Date.now() });
+                state.history = state.history.slice(0, 100);
+                save();
+                renderHistory();
+                state.justEvaluated = true;
+                exprEl.value = raw(r.value);
+                exprEl.classList.toggle('is-long', exprEl.value.length > 14);
+                resultEl.textContent = '';
+                exprEl.animate([{ transform: 'translateY(6px)', opacity: .4 }, { transform: 'none', opacity: 1 }], { duration: 220, easing: 'ease-out' });
+            }
+
+            function press(k) {
+                if (k === 'AC') { state.justEvaluated = false; setExpr(''); return; }
+                if (k === 'DEL') {
+                    state.justEvaluated = false;
+                    const t = exprEl.value;
+                    const m = t.match(/(sin\(|cos\(|tan\(|log\(|ln\(|√\(|ans)$/);
+                    setExpr(m ? t.slice(0, -m[0].length) : t.slice(0, -1));
+                    return;
+                }
+                if (k === '=') { evaluateNow(); return; }
+                insert(k);
+            }
+
+            document.querySelectorAll('[data-k]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    press(btn.dataset.k);
+                    if (matchMedia('(hover: hover)').matches) exprEl.focus({ preventScroll: true });
+                });
+            });
+
+            // キーボード入力: 記号を見やすい形に置き換える
+            exprEl.addEventListener('beforeinput', e => {
+                if (state.justEvaluated && e.inputType === 'insertText') {
+                    const k = e.data;
+                    if (!/^[+\-*/×÷^%−]$/.test(k)) { exprEl.value = ''; }
+                    state.justEvaluated = false;
+                }
+            });
+            exprEl.addEventListener('input', () => {
+                const pos = exprEl.selectionStart;
+                const before = exprEl.value;
+                const after = before.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−');
+                if (after !== before) {
+                    exprEl.value = after;
+                    exprEl.setSelectionRange(pos, pos);
+                }
+                state.justEvaluated = false;
+                refresh();
+            });
+            exprEl.addEventListener('keydown', e => {
+                if (e.key === 'Enter' || (e.key === '=' && !e.shiftKey)) { e.preventDefault(); evaluateNow(); flash('='); }
+                else if (e.key === 'Escape') { e.preventDefault(); press('AC'); flash('AC'); }
+            });
+            // 入力欄の外でも数字キーを受け付ける
+            document.addEventListener('keydown', e => {
+                if (e.metaKey || e.ctrlKey || e.altKey || SWB.palette.isOpen()) return;
+                if (document.activeElement === exprEl || SWB.isTyping(document.activeElement)) return;
+                if (/^[\d.+\-*/^%()]$/.test(e.key) || e.key === 'Enter' || e.key === 'Backspace' || e.key === 'Escape') {
+                    exprEl.focus();
+                    if (e.key === 'Enter') { e.preventDefault(); evaluateNow(); }
+                    else if (e.key === 'Escape') { e.preventDefault(); press('AC'); }
+                    else if (e.key === 'Backspace') { e.preventDefault(); press('DEL'); }
+                    else {
+                        e.preventDefault();
+                        const map = { '*': '×', '/': '÷', '-': '−' };
+                        press(map[e.key] || e.key);
+                    }
+                }
+            });
+            function flash(k) {
+                const b = document.querySelector('[data-k="' + k + '"]');
+                if (!b) return;
+                b.classList.add('is-pressed');
+                setTimeout(() => b.classList.remove('is-pressed'), 120);
+            }
+
+            function currentValue() {
+                if (state.justEvaluated) return exprEl.value;
+                const r = evaluate(exprEl.value, true);
+                return r.ok ? raw(r.value) : '';
+            }
+            resultEl.addEventListener('click', () => { const v = currentValue(); if (v) SWB.copy(v); });
+            $('copy-btn').addEventListener('click', () => { const v = currentValue(); if (v) SWB.copy(v); });
+
+            // DEG / RAD
+            document.querySelectorAll('[data-angle]').forEach(b => b.addEventListener('click', () => {
+                state.angle = b.dataset.angle;
+                save();
+                syncToggles();
+                refresh();
+            }));
+            $('sci-toggle').addEventListener('click', () => { state.sci = !state.sci; save(); syncToggles(); });
+            function syncToggles() {
+                document.querySelectorAll('[data-angle]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.angle === state.angle)));
+                $('sci-toggle').setAttribute('aria-pressed', String(state.sci));
+                $('sci').hidden = !state.sci;
+            }
+
+            // 履歴
+            function renderHistory() {
+                const list = $('hist');
+                if (!state.history.length) {
+                    list.innerHTML = '<li class="hist__empty">計算するとここに残ります</li>';
+                    return;
+                }
+                list.innerHTML = state.history.map((h, i) =>
+                    '<li><button type="button" class="hist__item" data-i="' + i + '"><span class="hist__expr">' + SWB.escape(h.e) + ' =</span><span class="hist__res">' + show(h.r) + '</span></button></li>'
+                ).join('');
+            }
+            $('hist').addEventListener('click', e => {
+                const b = e.target.closest('[data-i]');
+                if (!b) return;
+                const h = state.history[Number(b.dataset.i)];
+                if (e.target.closest('.hist__expr')) { state.justEvaluated = false; setExpr(h.e); }
+                else {
+                    const v = raw(h.r);
+                    if (state.justEvaluated || !exprEl.value) { state.justEvaluated = false; setExpr(v); }
+                    else setExpr(exprEl.value + v);
+                }
+                exprEl.focus({ preventScroll: true });
+            });
+            $('hist-clear').addEventListener('click', () => {
+                if (!state.history.length) return;
+                state.history = [];
+                save();
+                renderHistory();
+                SWB.toast('履歴を消去しました', 'trash');
+            });
+
+            syncToggles();
+            renderHistory();
+            refresh();
+            if (matchMedia('(hover: hover)').matches) exprEl.focus();
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>サーボ — SULE WORKSTATION BOX</title>
+    <meta name="theme-color" content="#3B2420">
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+    <link rel="stylesheet" href="assets/css/app.css">
+    <script src="assets/js/core.js"></script>
+    <script src="assets/js/expr.js" defer></script>
+    <style>
+        .modes { margin-bottom: 16px; }
+        .grid-2 { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 16px; align-items: start; }
+        @media (max-width: 960px) {
+            .grid-2 { grid-template-columns: 1fr; }
+            .grid-2 > .first-on-mobile { order: -1; } /* スマホでは角度を先に */
+        }
+        .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .fields .wide { grid-column: 1 / -1; }
+
+        .servo-stage { display: grid; grid-template-columns: minmax(200px, 260px) minmax(0, 1fr); gap: 20px; align-items: center; }
+        @media (max-width: 560px) { .servo-stage { grid-template-columns: 1fr; justify-items: center; } }
+        .servo-vis { width: 100%; max-width: 260px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        .servo-svg {
+            width: 100%;
+            height: auto;
+            display: block;
+            cursor: grab;
+            touch-action: none; /* ドラッグ中にページがスクロールしないように */
+            border-radius: 20px;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        .servo-svg:focus { outline: none; }
+        .servo-svg:focus-visible:not(.pointer-focus) { outline: 2.5px solid var(--accent); outline-offset: 2px; }
+        .servo-svg.is-dragging { cursor: grabbing; }
+        .servo-svg text { font-family: var(--font-mono); font-size: 11px; fill: var(--ink-3); }
+        .servo-svg .hit { fill: transparent; }
+        .horn { transition: transform .35s var(--spring), filter .2s; transform-origin: 120px 118px; }
+        .servo-svg:hover .horn, .servo-svg.is-dragging .horn { filter: drop-shadow(0 0 6px var(--glow)); }
+        .servo-svg.is-dragging .horn { transition: filter .2s; } /* ドラッグ中は指に吸い付かせる */
+        .drag-hint { font-size: 11.5px; color: var(--ink-3); display: inline-flex; align-items: center; gap: 4px; }
+
+        .angle-ctl { display: flex; flex-direction: column; gap: 10px; min-width: 0; width: 100%; }
+        .angle-input { width: 100%; max-width: 240px; }
+        .angle-input .input { width: 100%; }
+        .angle-ctl .range { width: 100%; }
+        .quick { display: flex; gap: 6px; flex-wrap: wrap; }
+        .quick .chip.is-fav { border-color: var(--accent); }
+
+        .code {
+            position: relative;
+            margin: 0;
+            padding: 16px 18px;
+            border-radius: 16px;
+            background: #1E130F;
+            color: #F2E7E0;
+            font-family: var(--font-mono);
+            font-size: 12.5px;
+            line-height: 1.7;
+            overflow-x: auto;
+            white-space: pre;
+        }
+        .code .c { color: #9C867A; }
+        .code .k { color: #FF9DB7; }
+        .code .n { color: #7FE9CF; }
+        .code-copy { position: absolute; top: 10px; right: 10px; }
+        .code-tabs { margin-bottom: 10px; }
+        .sub-note { font-size: 12px; color: var(--ink-3); margin-top: 8px; line-height: 1.6; }
+        .presets { display: flex; gap: 6px; flex-wrap: wrap; }
+    </style>
+</head>
+<body>
+    <header data-swb-header data-tool="servo"></header>
+
+    <main class="page">
+        <div class="page-head rise">
+            <div class="page-head__icon" data-icon="servo"></div>
+            <div>
+                <h1>サーボ</h1>
+                <p>角度 ⇄ パルス幅 ⇄ PCA9685 の tick 値。KRS（ICS）のポジション値も</p>
+            </div>
+        </div>
+
+        <div class="seg modes rise" id="modes" role="tablist" aria-label="モード">
+            <button type="button" role="tab" data-mode="pwm">PCA9685（PWM）</button>
+            <button type="button" role="tab" data-mode="ics">KRS（ICS）</button>
+        </div>
+
+        <!-- ================= PCA9685 ================= -->
+        <div id="pane-pwm">
+            <div class="grid-2">
+                <section class="card rise" aria-labelledby="set-title">
+                    <div class="card__head"><h2 id="set-title"><span data-icon="servo"></span>サーボとドライバの設定</h2></div>
+                    <div class="card__body stack">
+                        <div class="presets" id="presets"></div>
+                        <div class="fields">
+                            <div class="field">
+                                <label for="f-min">最小パルス（0°）</label>
+                                <div class="input-unit"><input class="input mono" id="f-min" type="number" inputmode="decimal"><span>µs</span></div>
+                            </div>
+                            <div class="field">
+                                <label for="f-max">最大パルス（可動角）</label>
+                                <div class="input-unit"><input class="input mono" id="f-max" type="number" inputmode="decimal"><span>µs</span></div>
+                            </div>
+                            <div class="field">
+                                <label for="f-range">可動角</label>
+                                <div class="input-unit"><input class="input mono" id="f-range" type="number" inputmode="decimal"><span>°</span></div>
+                            </div>
+                            <div class="field">
+                                <label for="f-freq">PWM 周波数</label>
+                                <div class="input-unit"><input class="input mono" id="f-freq" type="number" inputmode="decimal"><span>Hz</span></div>
+                            </div>
+                            <div class="field wide">
+                                <label for="f-osc">PCA9685 発振器クロック</label>
+                                <div class="input-unit"><input class="input mono" id="f-osc" type="number" inputmode="numeric"><span>Hz</span></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <button type="button" class="btn btn--ghost btn--sm" id="save-preset"><span data-icon="star"></span>この設定を保存</button>
+                        </div>
+                        <div class="note"><span data-icon="info"></span><span>内部発振器は公称 25 MHz ですが個体差があります。Adafruit のサンプルは <span class="mono">setOscillatorFrequency(27000000)</span> で補正しているので、実測で角度がずれるときはここを合わせてください。</span></div>
+                    </div>
+                </section>
+
+                <div class="stack first-on-mobile">
+                    <section class="card rise" aria-labelledby="ang-title">
+                        <div class="card__head"><h2 id="ang-title"><span data-icon="servo"></span>角度</h2><span class="hint" id="pwm-range-hint"></span></div>
+                        <div class="card__body stack">
+                            <div class="servo-stage">
+                                <div class="servo-vis"><div id="servo-vis" style="width:100%"></div><span class="drag-hint">ホーンをドラッグして回せます</span></div>
+                                <div class="angle-ctl">
+                                    <div class="input-unit angle-input"><input class="input input--xl" id="angle" type="number" inputmode="decimal" aria-label="角度"><span>°</span></div>
+                                    <input class="range" id="angle-range" type="range" step="1" aria-label="角度スライダー">
+                                    <div class="quick" id="quick"></div>
+                                </div>
+                            </div>
+                            <div class="stats" id="pwm-stats"></div>
+                            <div class="stats" id="pwm-info"></div>
+                        </div>
+                    </section>
+
+                    <section class="card rise" aria-labelledby="rev-title">
+                        <div class="card__head"><h2 id="rev-title"><span data-icon="swapH"></span>tick → 角度</h2></div>
+                        <div class="card__body">
+                            <div class="row">
+                                <div class="input-unit" style="width:180px"><input class="input mono" id="tick-in" type="number" inputmode="numeric" placeholder="307"><span>tick</span></div>
+                                <span class="mono" id="tick-out" style="font-size:18px;font-weight:700"></span>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <div class="grid-2" style="margin-top:16px">
+                <section class="card rise" aria-labelledby="tbl-title">
+                    <div class="card__head"><h2 id="tbl-title"><span data-icon="info"></span>角度表</h2><span class="hint">行タップで tick をコピー</span></div>
+                    <div class="card__body"><div class="table-wrap"><table class="data" id="pwm-table"></table></div></div>
+                </section>
+                <section class="card rise" aria-labelledby="code-title">
+                    <div class="card__head"><h2 id="code-title"><span data-icon="code"></span>コード</h2></div>
+                    <div class="card__body">
+                        <div class="seg code-tabs" id="code-tabs">
+                            <button type="button" data-lang="arduino">Arduino</button>
+                            <button type="button" data-lang="micropython">MicroPython</button>
+                        </div>
+                        <pre class="code" id="code"></pre>
+                        <p class="sub-note" id="code-note"></p>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- ================= KRS ICS ================= -->
+        <div id="pane-ics" hidden>
+            <div class="grid-2">
+                <section class="card rise" aria-labelledby="ics-title">
+                    <div class="card__head"><h2 id="ics-title"><span data-icon="servo"></span>角度 ⇄ ポジション</h2><span class="hint">ICS 3.5 / 3.6・可動範囲 270°</span></div>
+                    <div class="card__body stack">
+                        <div class="servo-stage">
+                            <div class="servo-vis"><div id="ics-vis" style="width:100%"></div><span class="drag-hint">ホーンをドラッグして回せます</span></div>
+                            <div class="angle-ctl">
+                                <div class="field">
+                                    <label for="ics-angle">角度（中心 0°）</label>
+                                    <div class="input-unit angle-input"><input class="input input--xl" id="ics-angle" type="number" step="0.1" inputmode="decimal"><span>°</span></div>
+                                </div>
+                                <input class="range" id="ics-range" type="range" min="-135" max="135" step="0.5" aria-label="角度スライダー">
+                                <div class="field">
+                                    <label for="ics-pos">ポジション値</label>
+                                    <input class="input mono angle-input" id="ics-pos" type="number" inputmode="numeric" min="3500" max="11500">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stats" id="ics-stats"></div>
+                        <div class="note"><span data-icon="info"></span><span>KRS-3304R2 など ICS 3.5 / 3.6 のサーボは、ポジション 3500〜11500（中心 7500）が −135°〜+135° に対応します。1° ≈ 29.6。</span></div>
+                    </div>
+                </section>
+                <section class="card rise" aria-labelledby="ics-tbl-title">
+                    <div class="card__head"><h2 id="ics-tbl-title"><span data-icon="info"></span>角度表</h2><span class="hint">行タップでコピー</span></div>
+                    <div class="card__body"><div class="table-wrap"><table class="data" id="ics-table"></table></div></div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        (function () {
+            const $ = id => document.getElementById(id);
+            const BUILTIN = [
+                { name: '標準 500–2500µs / 180°', min: 500, max: 2500, range: 180, freq: 50, osc: 25000000 },
+                { name: '狭域 1000–2000µs / 90°', min: 1000, max: 2000, range: 90, freq: 50, osc: 25000000 },
+                { name: 'Adafruit 例 (27MHz補正)', min: 500, max: 2500, range: 180, freq: 50, osc: 27000000 }
+            ];
+            const saved = SWB.store.get('swb-servo', {});
+            const state = Object.assign({
+                mode: 'pwm', min: 500, max: 2500, range: 180, freq: 50, osc: 25000000, angle: 90,
+                ics: 0, lang: 'arduino', presets: []
+            }, saved);
+            const save = () => SWB.store.set('swb-servo', state);
+            const num = (v, d) => { const n = parseFloat(v); return Number.isFinite(n) ? n : d; };
+
+            /* ---------- 共通: サーボの見た目 ---------- */
+            function servoSVG(id) {
+                return '<svg class="servo-svg" viewBox="0 0 240 230">' +
+                    '<circle class="hit" cx="120" cy="118" r="112" />' +
+                    '<path id="' + id + '-arc" fill="none" stroke="var(--accent)" stroke-width="3" stroke-dasharray="2 7" stroke-linecap="round" opacity=".8" />' +
+                    '<rect x="62" y="96" width="116" height="122" rx="16" fill="var(--choco)" />' +
+                    '<rect x="44" y="176" width="152" height="16" rx="6" fill="var(--choco-2)" />' +
+                    '<circle cx="54" cy="184" r="3.5" fill="var(--bg)" /><circle cx="186" cy="184" r="3.5" fill="var(--bg)" />' +
+                    '<circle cx="120" cy="118" r="20" fill="var(--choco-2)" />' +
+                    '<g class="horn" id="' + id + '-horn">' +
+                        '<path d="M111 118 L114 40 a6 6 0 0 1 12 0 L129 118 z" fill="var(--accent)" />' +
+                        '<circle cx="120" cy="118" r="15" fill="var(--accent)" />' +
+                        '<circle cx="120" cy="48" r="2.6" fill="var(--choco)" /><circle cx="120" cy="64" r="2.6" fill="var(--choco)" /><circle cx="120" cy="80" r="2.6" fill="var(--choco)" />' +
+                        '<circle cx="120" cy="118" r="6" fill="var(--choco)" />' +
+                    '</g>' +
+                    '<text id="' + id + '-l" text-anchor="middle"></text><text id="' + id + '-r" text-anchor="middle"></text>' +
+                '</svg>';
+            }
+            const R = 96, CX = 120, CY = 118;
+            const pt = (deg, r) => [CX + r * Math.sin(deg * Math.PI / 180), CY - r * Math.cos(deg * Math.PI / 180)];
+            function drawRange(id, span, leftLabel, rightLabel) {
+                const a = -span / 2, b = span / 2;
+                const p1 = pt(a, R), p2 = pt(b, R);
+                $(id + '-arc').setAttribute('d', 'M' + p1[0].toFixed(1) + ' ' + p1[1].toFixed(1) + ' A' + R + ' ' + R + ' 0 ' + (span > 180 ? 1 : 0) + ' 1 ' + p2[0].toFixed(1) + ' ' + p2[1].toFixed(1));
+                const l = pt(a, R + 14), r = pt(b, R + 14);
+                const tl = $(id + '-l'), tr = $(id + '-r');
+                tl.setAttribute('x', l[0].toFixed(1)); tl.setAttribute('y', (l[1] + 4).toFixed(1)); tl.textContent = leftLabel;
+                tr.setAttribute('x', r[0].toFixed(1)); tr.setAttribute('y', (r[1] + 4).toFixed(1)); tr.textContent = rightLabel;
+            }
+            function setHorn(id, displayDeg) {
+                $(id + '-horn').style.transform = 'rotate(' + displayDeg + 'deg)';
+            }
+            $('servo-vis').innerHTML = servoSVG('pv');
+            $('ics-vis').innerHTML = servoSVG('iv');
+
+            /* ホーンをドラッグ (またはキーボードの矢印) で角度を変える
+               opts.span: 可動角, opts.offset: 表示角 → 値 の足し算, opts.step: 刻み */
+            function draggableServo(svg, opts) {
+                svg.setAttribute('tabindex', '0');
+                svg.setAttribute('role', 'slider');
+                svg.setAttribute('aria-label', 'サーボホーンの角度');
+                let lastDisplay = 0, frame = 0, pending = null;
+
+                function commit(value) {
+                    pending = value;
+                    if (frame) return;
+                    frame = requestAnimationFrame(() => { frame = 0; opts.set(pending); });
+                }
+                function fromPointer(e) {
+                    const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(svg.getScreenCTM().inverse());
+                    let disp = Math.atan2(p.x - CX, -(p.y - CY)) * 180 / Math.PI; // 0 = 真上、時計回りが +
+                    const half = opts.span() / 2;
+                    // 可動範囲の外 (下側) では、直前にいた側の端で止める (反対側へ飛ばない)
+                    if (disp > half || disp < -half) disp = lastDisplay >= 0 ? half : -half;
+                    lastDisplay = disp;
+                    const step = e.shiftKey ? 15 : opts.step;
+                    return Math.round((disp + opts.offset()) / step) * step;
+                }
+                svg.addEventListener('pointerdown', e => {
+                    if (e.button !== 0) return;
+                    e.preventDefault();
+                    svg.classList.add('pointer-focus'); // マウス・タッチではフォーカス枠を出さない
+                    svg.focus({ preventScroll: true });
+                    lastDisplay = opts.get() - opts.offset();
+                    svg.setPointerCapture(e.pointerId);
+                    svg.classList.add('is-dragging');
+                    commit(fromPointer(e));
+                });
+                svg.addEventListener('pointermove', e => {
+                    if (svg.hasPointerCapture(e.pointerId)) commit(fromPointer(e));
+                });
+                const end = e => {
+                    if (svg.hasPointerCapture(e.pointerId)) {
+                        if (e.type === 'pointerup') commit(fromPointer(e)); // 指を離した位置で確定
+                        svg.releasePointerCapture(e.pointerId);
+                    }
+                    svg.classList.remove('is-dragging');
+                };
+                svg.addEventListener('pointerup', end);
+                svg.addEventListener('pointercancel', end);
+                svg.addEventListener('keydown', e => {
+                    const min = opts.offset() - opts.span() / 2, max = opts.offset() + opts.span() / 2;
+                    const big = e.shiftKey ? 10 : 1;
+                    const v = opts.get();
+                    const next = {
+                        ArrowRight: v + opts.step * big, ArrowUp: v + opts.step * big,
+                        ArrowLeft: v - opts.step * big, ArrowDown: v - opts.step * big,
+                        PageUp: v + 15, PageDown: v - 15, Home: min, End: max
+                    }[e.key];
+                    if (next === undefined) return;
+                    e.preventDefault();
+                    svg.classList.remove('pointer-focus');
+                    opts.set(Math.max(min, Math.min(max, next)));
+                });
+            }
+            function syncSlider(id, value, text, min, max) {
+                const svg = $(id).querySelector('svg');
+                svg.setAttribute('aria-valuemin', min);
+                svg.setAttribute('aria-valuemax', max);
+                svg.setAttribute('aria-valuenow', value);
+                svg.setAttribute('aria-valuetext', text);
+            }
+
+            /* ---------- モード切替 ---------- */
+            $('modes').addEventListener('click', e => {
+                const b = e.target.closest('[data-mode]');
+                if (!b) return;
+                state.mode = b.dataset.mode;
+                save();
+                renderMode();
+            });
+            function renderMode() {
+                $('modes').querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.mode === state.mode)));
+                $('pane-pwm').hidden = state.mode !== 'pwm';
+                $('pane-ics').hidden = state.mode !== 'ics';
+            }
+
+            /* ---------- PCA9685 ---------- */
+            const F = { min: $('f-min'), max: $('f-max'), range: $('f-range'), freq: $('f-freq'), osc: $('f-osc') };
+            function loadFields() { Object.keys(F).forEach(k => { F[k].value = state[k]; }); }
+            Object.keys(F).forEach(k => F[k].addEventListener('input', () => {
+                state[k] = num(F[k].value, state[k]);
+                save();
+                renderPwm();
+            }));
+
+            function pca() {
+                const osc = Math.max(1, state.osc), freq = Math.max(1, state.freq);
+                // Adafruit_PWMServoDriver::setPWMFreq と同じ丸め (データシート: round(osc / (4096 × freq)) − 1)
+                const prescale = Math.min(255, Math.max(3, Math.floor(osc / (4096 * freq) + 0.5) - 1));
+                const actual = osc / (4096 * (prescale + 1));
+                const tickUs = 1e6 / (actual * 4096);
+                return { prescale, actual, tickUs, periodUs: 1e6 / actual };
+            }
+            const usAt = deg => state.min + (state.max - state.min) * deg / state.range;
+            const ticksFor = (us, p) => Math.round(us / p.tickUs);
+
+            function renderPresets() {
+                const all = BUILTIN.concat(state.presets);
+                $('presets').innerHTML = all.map((p, i) =>
+                    '<button type="button" class="chip" data-p="' + i + '">' + SWB.escape(p.name) + (i >= BUILTIN.length ? ' <small data-del="' + (i - BUILTIN.length) + '" title="削除">×</small>' : '') + '</button>'
+                ).join('');
+                const same = p => p.min === state.min && p.max === state.max && p.range === state.range && p.freq === state.freq && p.osc === state.osc;
+                $('presets').querySelectorAll('[data-p]').forEach(b => b.setAttribute('aria-pressed', String(same(all[Number(b.dataset.p)]))));
+            }
+            $('presets').addEventListener('click', e => {
+                const del = e.target.closest('[data-del]');
+                if (del) {
+                    state.presets.splice(Number(del.dataset.del), 1);
+                    save();
+                    renderPresets();
+                    return;
+                }
+                const b = e.target.closest('[data-p]');
+                if (!b) return;
+                const p = BUILTIN.concat(state.presets)[Number(b.dataset.p)];
+                ['min', 'max', 'range', 'freq', 'osc'].forEach(k => { state[k] = p[k]; });
+                state.angle = Math.min(state.angle, state.range);
+                save();
+                loadFields();
+                renderPwm();
+            });
+            $('save-preset').addEventListener('click', () => {
+                const name = prompt('設定の名前（例: モフスパイダー脚）', state.min + '–' + state.max + 'µs / ' + state.range + '°');
+                if (!name) return;
+                state.presets.push({ name: name.slice(0, 30), min: state.min, max: state.max, range: state.range, freq: state.freq, osc: state.osc });
+                save();
+                renderPresets();
+                SWB.toast('保存しました', 'star');
+            });
+
+            const angleEl = $('angle'), angleRange = $('angle-range');
+            angleEl.addEventListener('input', () => { state.angle = num(angleEl.value, state.angle); save(); renderPwm(true); });
+            angleRange.addEventListener('input', () => { state.angle = Number(angleRange.value); save(); renderPwm(); });
+            $('quick').addEventListener('click', e => {
+                const b = e.target.closest('[data-a]');
+                if (!b) return;
+                state.angle = Number(b.dataset.a);
+                save();
+                renderPwm();
+            });
+
+            function stat(label, value, unit, sub, copy, cls) {
+                return '<button type="button" class="stat' + (cls ? ' ' + cls : '') + '" data-copy="' + copy + '" data-label="' + label + '">' +
+                    '<div class="stat__label">' + label + '</div><div class="stat__value">' + value + (unit ? '<small>' + unit + '</small>' : '') + '</div>' +
+                    (sub ? '<div class="stat__sub">' + sub + '</div>' : '') + '</button>';
+            }
+
+            function renderPwm(fromTyping) {
+                renderPresets();
+                const p = pca();
+                const valid = state.range > 0 && state.max > state.min;
+                const angle = state.angle;
+                const us = usAt(angle);
+                const ticks = ticksFor(us, p);
+                const out = angle < 0 || angle > state.range;
+
+                if (!fromTyping) angleEl.value = angle;
+                angleRange.min = 0;
+                angleRange.max = state.range;
+                angleRange.value = Math.max(0, Math.min(state.range, angle));
+                angleRange.style.setProperty('--fill', (Math.max(0, Math.min(1, angle / state.range)) * 100) + '%');
+                $('pwm-range-hint').textContent = '0〜' + state.range + '°';
+
+                const quick = [0, 30, 45, 60, 90, 120, 135, 150, 180, 270].filter(a => a <= state.range);
+                $('quick').innerHTML = quick.map(a =>
+                    '<button type="button" class="chip' + ([60, 90, 120].includes(a) ? ' is-fav' : '') + '" data-a="' + a + '" aria-pressed="' + (a === angle) + '">' + a + '°</button>'
+                ).join('');
+
+                drawRange('pv', state.range, '0°', state.range + '°');
+                setHorn('pv', Math.max(0, Math.min(state.range, angle)) - state.range / 2);
+                syncSlider('servo-vis', angle, angle + '°', 0, state.range);
+
+                $('pwm-stats').innerHTML = valid ? [
+                    stat('tick 値', ticks, '/ 4095', out ? '⚠ 可動角の外です' : 'setPWM(ch, 0, ' + ticks + ')', ticks, 'stat--hero'),
+                    stat('パルス幅', SWB.fmt(us, 6, { group: false }), 'µs', '周期 ' + SWB.fmt(p.periodUs / 1000, 5) + ' ms', Math.round(us)),
+                    stat('デューティ比', SWB.fmt(us / p.periodUs * 100, 4), '%', 'duty_u16 = ' + Math.round(us / p.periodUs * 65535), SWB.fmt(us / p.periodUs * 100, 4))
+                ].join('') : '<div class="note">' + SWB.icon('info') + '<span>最大パルスは最小より大きく、可動角は 0 より大きくしてください。</span></div>';
+
+                const degPerTick = state.range / ((state.max - state.min) / p.tickUs);
+                $('pwm-info').innerHTML = [
+                    stat('プリスケーラ', p.prescale, '', 'レジスタ 0xFE', p.prescale),
+                    stat('実際の周波数', SWB.fmt(p.actual, 5), 'Hz', '設定 ' + state.freq + ' Hz', SWB.fmt(p.actual, 6)),
+                    stat('1 tick', SWB.fmt(p.tickUs, 4), 'µs', '≈ ' + SWB.fmt(degPerTick, 3) + '° / tick', SWB.fmt(p.tickUs, 6))
+                ].join('');
+
+                // 角度表
+                const step = state.range > 180 ? 30 : 15;
+                const rows = [];
+                for (let a = 0; a <= state.range + 1e-9; a += step) rows.push(a);
+                if (rows[rows.length - 1] !== state.range) rows.push(state.range);
+                $('pwm-table').innerHTML = '<thead><tr><th>角度</th><th>パルス幅 µs</th><th>tick</th><th>デューティ %</th></tr></thead><tbody>' +
+                    rows.map(a => {
+                        const u = usAt(a);
+                        return '<tr data-tick="' + ticksFor(u, p) + '" class="' + (Math.abs(a - angle) < 1e-9 ? 'is-hit' : '') + '" style="cursor:copy"><td>' + a + '°</td><td>' + SWB.fmt(u, 6, { group: false }) + '</td><td>' + ticksFor(u, p) + '</td><td>' + SWB.fmt(u / p.periodUs * 100, 4) + '</td></tr>';
+                    }).join('') + '</tbody>';
+
+                renderTickReverse();
+                renderCode(p);
+            }
+
+            $('pwm-table').addEventListener('click', e => {
+                const tr = e.target.closest('[data-tick]');
+                if (tr) SWB.copy(tr.dataset.tick, 'tick');
+            });
+            document.addEventListener('click', e => {
+                const b = e.target.closest('.stats [data-copy]');
+                if (b) SWB.copy(b.dataset.copy, b.dataset.label);
+            });
+
+            $('tick-in').addEventListener('input', renderTickReverse);
+            function renderTickReverse() {
+                const t = parseFloat($('tick-in').value);
+                if (!Number.isFinite(t)) { $('tick-out').textContent = ''; return; }
+                const p = pca();
+                const us = t * p.tickUs;
+                const a = (us - state.min) / (state.max - state.min) * state.range;
+                $('tick-out').textContent = '= ' + SWB.fmt(us, 5) + ' µs ／ ' + SWB.fmt(a, 4) + '°';
+            }
+
+            /* コード生成 */
+            $('code-tabs').addEventListener('click', e => {
+                const b = e.target.closest('[data-lang]');
+                if (!b) return;
+                state.lang = b.dataset.lang;
+                save();
+                renderCode(pca());
+            });
+            function renderCode(p) {
+                $('code-tabs').querySelectorAll('[data-lang]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lang === state.lang)));
+                const k = s => '<span class="k">' + s + '</span>', n = s => '<span class="n">' + s + '</span>', c = s => '<span class="c">' + s + '</span>';
+                let html;
+                if (state.lang === 'arduino') {
+                    html =
+                        k('#include') + ' &lt;Adafruit_PWMServoDriver.h&gt;\n\n' +
+                        'Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();\n\n' +
+                        k('const float') + ' SERVO_FREQ = ' + n(state.freq) + ';      ' + c('// Hz') + '\n' +
+                        k('const float') + ' US_MIN = ' + n(state.min) + ';         ' + c('// 0°') + '\n' +
+                        k('const float') + ' US_MAX = ' + n(state.max) + ';        ' + c('// ' + state.range + '°') + '\n' +
+                        k('const float') + ' RANGE_DEG = ' + n(state.range) + ';\n\n' +
+                        k('void') + ' setServo(uint8_t ch, float deg) {\n' +
+                        '  deg = constrain(deg, 0, RANGE_DEG);\n' +
+                        '  pwm.writeMicroseconds(ch, US_MIN + (US_MAX - US_MIN) * deg / RANGE_DEG);\n' +
+                        '}\n\n' +
+                        k('void') + ' setup() {\n' +
+                        '  pwm.begin();\n' +
+                        '  pwm.setOscillatorFrequency(' + n(state.osc) + ');\n' +
+                        '  pwm.setPWMFreq(SERVO_FREQ);   ' + c('// prescale = ' + p.prescale) + '\n' +
+                        '  setServo(' + n(0) + ', ' + n(state.angle) + ');           ' + c('// = setPWM(0, 0, ' + ticksFor(usAt(state.angle), p) + ')') + '\n' +
+                        '}';
+                    $('code-note').textContent = 'writeMicroseconds は内部でプリスケーラと発振器周波数から tick を計算します（小数切り捨て）。';
+                } else {
+                    const duty16 = Math.round(usAt(state.angle) / p.periodUs * 65535);
+                    html =
+                        c('# PCA9685 を I2C で直接たたく最小構成 (ESP32)') + '\n' +
+                        k('from') + ' machine ' + k('import') + ' I2C, Pin\n' +
+                        k('import') + ' time\n\n' +
+                        'ADDR = ' + n('0x40') + '\n' +
+                        'i2c = I2C(' + n(0) + ', scl=Pin(' + n(22) + '), sda=Pin(' + n(21) + '), freq=' + n(400000) + ')\n\n' +
+                        k('def') + ' init():\n' +
+                        '    i2c.writeto_mem(ADDR, ' + n('0x00') + ', bytes([' + n('0x10') + ']))   ' + c('# sleep') + '\n' +
+                        '    i2c.writeto_mem(ADDR, ' + n('0xFE') + ', bytes([' + n(p.prescale) + ']))    ' + c('# prescale → ' + SWB.fmt(p.actual, 5) + ' Hz') + '\n' +
+                        '    i2c.writeto_mem(ADDR, ' + n('0x00') + ', bytes([' + n('0x20') + ']))   ' + c('# wake + auto increment') + '\n' +
+                        '    time.sleep_ms(' + n(1) + ')\n\n' +
+                        k('def') + ' set_ticks(ch, off):\n' +
+                        '    i2c.writeto_mem(ADDR, ' + n('0x06') + ' + ' + n(4) + ' * ch, bytes([' + n(0) + ', ' + n(0) + ', off &amp; ' + n('0xFF') + ', off &gt;&gt; ' + n(8) + ']))\n\n' +
+                        k('def') + ' set_angle(ch, deg):\n' +
+                        '    deg = max(' + n(0) + ', min(' + n(state.range) + ', deg))\n' +
+                        '    us = ' + n(state.min) + ' + (' + n(state.max - state.min) + ') * deg / ' + n(state.range) + '\n' +
+                        '    set_ticks(ch, round(us / ' + n(SWB.fmt(p.tickUs, 8, { group: false })) + '))\n\n' +
+                        'init()\n' +
+                        'set_angle(' + n(0) + ', ' + n(state.angle) + ')   ' + c('# → ' + ticksFor(usAt(state.angle), p) + ' tick') + '\n\n' +
+                        c('# ESP32 の PWM ピン直結 (PCA9685 なし) なら:') + '\n' +
+                        c('#   pwm = machine.PWM(Pin(18), freq=' + state.freq + ')') + '\n' +
+                        c('#   pwm.duty_u16(' + duty16 + ')   # ' + state.angle + '°');
+                    $('code-note').textContent = 'SDA=21 / SCL=22（ESP32 の標準ピン）。I2C アドレスはボードのジャンパに合わせてください。';
+                }
+                $('code').innerHTML = html + '<button type="button" class="icon-btn code-copy" id="code-copy" aria-label="コードをコピー">' + SWB.icon('copy') + '</button>';
+                $('code-copy').addEventListener('click', () => SWB.copy($('code').innerText.trim(), 'コード'));
+            }
+
+            /* ---------- KRS ICS ---------- */
+            const ICS_CENTER = 7500, ICS_PER_DEG = 4000 / 135;
+            const icsPos = deg => Math.round(ICS_CENTER + deg * ICS_PER_DEG);
+            const icsDeg = pos => (pos - ICS_CENTER) / ICS_PER_DEG;
+            const ia = $('ics-angle'), ir = $('ics-range'), ip = $('ics-pos');
+            ia.addEventListener('input', () => { state.ics = Math.max(-135, Math.min(135, num(ia.value, state.ics))); save(); renderIcs('angle'); });
+            ir.addEventListener('input', () => { state.ics = Number(ir.value); save(); renderIcs(); });
+            ip.addEventListener('input', () => {
+                const pos = num(ip.value, NaN);
+                if (!Number.isFinite(pos)) return;
+                state.ics = Math.max(-135, Math.min(135, icsDeg(pos)));
+                save();
+                renderIcs('pos');
+            });
+            function renderIcs(from) {
+                const deg = state.ics;
+                const pos = icsPos(deg);
+                if (from !== 'angle') ia.value = Math.round(deg * 100) / 100;
+                if (from !== 'pos') ip.value = pos;
+                ir.value = deg;
+                ir.style.setProperty('--fill', ((deg + 135) / 270 * 100) + '%');
+                drawRange('iv', 270, '−135°', '+135°');
+                setHorn('iv', deg);
+                syncSlider('ics-vis', deg, (deg > 0 ? '+' : '') + deg + '°（ポジション ' + pos + '）', -135, 135);
+                $('ics-stats').innerHTML = [
+                    stat('ポジション値', pos, '', '3500〜11500', pos, 'stat--hero'),
+                    stat('中心からの角度', (deg > 0 ? '+' : '') + SWB.fmt(deg, 5), '°', '0〜270° 表記なら ' + SWB.fmt(deg + 135, 5) + '°', SWB.fmt(deg, 6)),
+                    stat('1° あたり', SWB.fmt(ICS_PER_DEG, 4), '', '1 = ' + SWB.fmt(1 / ICS_PER_DEG, 4) + '°', SWB.fmt(ICS_PER_DEG, 6))
+                ].join('');
+                const rows = [-135, -90, -60, -45, -30, 0, 30, 45, 60, 90, 135];
+                $('ics-table').innerHTML = '<thead><tr><th>角度</th><th>ポジション</th><th>0〜270° 表記</th></tr></thead><tbody>' +
+                    rows.map(a => '<tr data-pos="' + icsPos(a) + '" style="cursor:copy" class="' + (Math.abs(a - deg) < 1e-9 ? 'is-hit' : '') + '"><td>' + (a > 0 ? '+' : '') + a + '°</td><td>' + icsPos(a) + '</td><td>' + (a + 135) + '°</td></tr>').join('') + '</tbody>';
+            }
+            $('ics-table').addEventListener('click', e => {
+                const tr = e.target.closest('[data-pos]');
+                if (tr) SWB.copy(tr.dataset.pos, 'ポジション');
+            });
+
+            draggableServo($('servo-vis').querySelector('svg'), {
+                span: () => state.range, offset: () => state.range / 2, step: 1,
+                get: () => state.angle,
+                set: v => { state.angle = v; save(); renderPwm(); }
+            });
+            draggableServo($('ics-vis').querySelector('svg'), {
+                span: () => 270, offset: () => 0, step: 0.5,
+                get: () => state.ics,
+                set: v => { state.ics = v; save(); renderIcs(); }
+            });
+
+            loadFields();
+            renderMode();
+            renderPwm();
+            renderIcs();
+            if (SWB.params.get('mode') === 'ics') { state.mode = 'ics'; renderMode(); }
+        })();
+    </script>
+</body>
+</html>

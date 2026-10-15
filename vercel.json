@@ -1,0 +1,19 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/translate.js": { "maxDuration": 60 }
+  },
+  "redirects": [
+    { "source": "/unitconverter.html", "destination": "/units.html", "permanent": true },
+    { "source": "/screw_chart.html", "destination": "/screws.html", "permanent": true },
+    { "source": "/tolerance_chart.html", "destination": "/fits.html", "permanent": true },
+    { "source": "/calculator.html", "destination": "/calc.html", "permanent": true },
+    { "source": "/weather.html", "destination": "/", "permanent": true }
+  ],
+  "headers": [
+    {
+      "source": "/assets/img/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=2592000" }]
+    }
+  ]
+}

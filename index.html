@@ -1,420 +1,304 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>SULE WORKSTATION BOX</title>
-    <!-- Font Awesome for Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- 共通テーマ (theme.css で一元管理 / theme.js が切り替え) -->
-    <link rel="stylesheet" href="theme.css">
-    <script src="theme.js"></script>
+    <meta name="description" content="SULEBOX のものづくり用ワークステーション。単位変換・ネジ・はめあい・電卓・翻訳・サーボ・回路計算。">
+    <meta name="theme-color" content="#3B2420">
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+    <link rel="preload" as="image" href="assets/img/city-day.webp" type="image/webp" media="(min-width: 901px)">
+    <link rel="stylesheet" href="assets/css/app.css">
+    <script src="assets/js/core.js"></script>
+    <script src="assets/js/expr.js" defer></script>
     <style>
-        /* テーマカラーは theme.css からエイリアス */
-        :root {
-            --choco-dark: var(--theme-main);
-            --choco-light: var(--theme-text-sec);
-            --mint-main: var(--theme-accent);
-            --mint-bright: var(--theme-accent-bright);
-            --mint-glow: var(--theme-glow);
-        }
-
-        /* 共通テーマ切り替えUIの配置 (右上固定) */
-        .page-theme-switcher {
-            position: fixed;
-            top: 16px;
-            right: 16px;
-            z-index: 20;
-        }
-
-        /* --- Global Reset & Layout --- */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        body.home {
             height: 100vh;
-            width: 100vw;
-            overflow: hidden; /* Prevent scrolling */
+            height: 100dvh;
+            overflow: hidden;
+            background: #2A1B17;
+            display: grid;
+            grid-template-rows: auto 1fr;
+        }
+
+        /* --- 街の背景 ------------------------------------------------
+           昼/夜の写真をクロスフェード。ネオン部分は city-neon.webp を
+           マスクにしてテーマ色 (--accent) で塗るので、テーマを変えると
+           看板や窓の光もその色になる。夜はスクリーン合成で発光させる。 */
+        .city { position: fixed; inset: 0; z-index: 0; overflow: hidden; }
+        .city__layer {
+            position: absolute;
+            inset: -2%;
+            background-size: cover;
+            background-position: center 38%;
+            background-repeat: no-repeat;
+            transition: opacity 2s var(--ease), filter 2s var(--ease);
+            animation: drift 40s ease-in-out infinite alternate;
+        }
+        .city__day { background-image: url("assets/img/city-day.webp"); }
+        .city__night { background-image: url("assets/img/city-night.webp"); opacity: 0; }
+        .city__neon {
+            --neon: url("assets/img/city-neon.webp");
+            background: var(--accent);
+            -webkit-mask: var(--neon) center 38% / cover no-repeat;
+            mask: var(--neon) center 38% / cover no-repeat;
+            mix-blend-mode: color;
+            opacity: .95;
+            transition: opacity 2s var(--ease), background-color .6s var(--ease);
+        }
+        .city__shade {
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(120% 70% at 50% 110%, rgba(20, 12, 10, .55), transparent 60%),
+                linear-gradient(180deg, rgba(20, 12, 10, .18), transparent 22%);
+            transition: background-color 2s var(--ease);
+        }
+        @media (max-width: 900px) {
+            .city__day { background-image: url("assets/img/city-day-1280.webp"); }
+            .city__night { background-image: url("assets/img/city-night-1280.webp"); }
+            .city__neon { --neon: url("assets/img/city-neon-1280.webp"); }
+        }
+        /* 昼のチョコミントは元の絵のままでOK */
+        html[data-mode="day"][data-theme="mint"] .city__neon { opacity: 0; }
+        /* バナナ・ストロベリーは街を少し落ち着かせて、光る部分をテーマ色に */
+        html[data-theme="banana"] .city__day, html[data-theme="strawberry"] .city__day { filter: saturate(.5); }
+        html[data-theme="banana"] .city__night, html[data-theme="strawberry"] .city__night { filter: saturate(.35); }
+        /* 夜: 街を暗くしてネオンを発光 */
+        html[data-mode="night"] .city__night { opacity: 1; }
+        html[data-mode="night"] .city__shade { background-color: rgba(10, 5, 4, .7); }
+        html[data-mode="night"] .city__neon {
+            mix-blend-mode: screen;
+            opacity: 1;
+            animation: drift 40s ease-in-out infinite alternate, flicker 9s steps(1) infinite;
+        }
+
+        @keyframes drift { from { transform: scale(1) translate3d(0, 0, 0); } to { transform: scale(1.035) translate3d(-.6%, -.4%, 0); } }
+        @keyframes flicker { 0%, 100% { opacity: 1; } 61% { opacity: .78; } 62% { opacity: 1; } 63% { opacity: .88; } 64% { opacity: 1; } }
+
+        /* --- 上部: 時計と設定 --- */
+        .home-top {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
+        }
+        .glass {
+            background: color-mix(in srgb, var(--surface) 70%, transparent);
+            -webkit-backdrop-filter: saturate(1.5) blur(16px);
+            backdrop-filter: saturate(1.5) blur(16px);
+            border: 1px solid color-mix(in srgb, var(--surface) 60%, transparent);
+            box-shadow: 0 10px 30px -12px rgba(20, 12, 10, .45);
+        }
+        html[data-mode="night"] .glass {
+            background: color-mix(in srgb, var(--surface) 72%, transparent);
+            border-color: rgba(255, 255, 255, .08);
+        }
+        .clock {
+            padding: 10px 16px 10px 14px;
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .clock__dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 0 4px var(--accent-soft), 0 0 14px var(--glow);
+            animation: pulse 2.4s ease-in-out infinite;
+        }
+        @keyframes pulse { 50% { box-shadow: 0 0 0 7px transparent, 0 0 18px var(--glow); } }
+        .clock__time { font-family: var(--font-mono); font-weight: 700; font-size: 22px; letter-spacing: -.02em; line-height: 1; }
+        .clock__time span { animation: blink 1s steps(1) infinite; }
+        @keyframes blink { 50% { opacity: .25; } }
+        .clock__date { font-family: var(--font-ui); font-weight: 700; font-size: 12px; color: var(--ink-2); line-height: 1.3; }
+        .home-top__tools { display: flex; gap: 8px; align-items: center; padding: 6px; border-radius: 18px; }
+        .home-top__tools .swatches, .home-top__tools .icon-btn, .home-top__tools .palette-btn { border-color: transparent; background: transparent; }
+
+        /* --- ドック --- */
+        .home-main {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding: 16px max(16px, env(safe-area-inset-right)) max(22px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+        }
+        .dock {
+            width: min(860px, 100%);
+            border-radius: 30px;
+            padding: 18px 20px 14px;
+        }
+        .dock__head { display: flex; align-items: baseline; gap: 12px; padding: 0 6px 12px; }
+        .greet { font-family: var(--font-ui); font-weight: 900; font-size: clamp(18px, 2.4vw, 22px); letter-spacing: .02em; }
+        .greet b { color: var(--accent-ink); font-weight: 900; }
+        .dock__hint { margin-left: auto; color: var(--ink-2); font-size: 12px; display: flex; gap: 6px; align-items: center; white-space: nowrap; }
+
+        .tiles {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+        .tile {
+            position: relative;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            
-            /* Background Configuration (Layer 0 - Day) */
-            background-image: url('W_city.jpg'); 
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            
-            background-color: var(--mint-main);
-            position: relative; /* 子要素のabsolute配置の基準 */
-        }
-
-        /* --- Night Background Image (Layer 0.5) --- */
-        /* 昼の画像の上に重ねて、夜にフェードインさせるための擬似要素 */
-        body::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: url('W_city_night.jpg');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            
-            opacity: 0; /* 初期状態は透明（昼） */
-            z-index: 0; /* body(Layer0)より上、ネオン(Layer1)より下 */
-            pointer-events: none;
-            transition: opacity 2s ease; /* 2秒かけてフェード */
-        }
-
-        /* 夜モード時は夜背景を表示 */
-        body.is-night::before {
-            opacity: 1;
-        }
-
-        /* --- Neon Sign Image (Layer 1) --- */
-        #neon-sign {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover; /* 背景画像のbackground-size: coverと挙動を合わせる */
-            object-position: center;
-            
-            /* 配置設定 */
-            z-index: 1; /* 夜背景より手前、オーバーレイより奥 */
-            pointer-events: none; /* クリックを透過させる */
-            
-            /* 初期状態（昼） */
-            filter: brightness(100%) saturate(100%);
-            transition: filter 2s ease; /* 2秒かけて輝きを変化 */
-        }
-
-        /* 夜モード時のネオンの輝き */
-        body.is-night #neon-sign {
-            /* スモーク越しでも輝いて見えるように輝度と彩度を大幅に上げる */
-            filter: brightness(200%) saturate(180%);
-        }
-
-        /* --- Night Overlay (Layer 2) --- */
-        #night-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.6); /* 半透明の黒フィルター */
-            opacity: 0; /* 初期状態は透明 */
-            pointer-events: none;
-            
-            /* 配置設定 */
-            z-index: 5; /* ネオンより手前、コンテンツより奥 */
-            transition: opacity 2s ease;
-        }
-
-        /* 夜モード時のオーバーレイ表示 */
-        body.is-night #night-overlay {
-            opacity: 1;
-        }
-
-        /* --- Title Styling (Layer 3) --- */
-        header {
-            margin-bottom: 40px;
-            text-align: center;
-            z-index: 10; /* 最前面 */
-            position: relative;
-        }
-
-        h1 {
-            font-size: 3rem;
-            font-weight: 900;
-            color: var(--choco-dark);
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            
-            /* Mint Outline/Shadow Effect */
-            text-shadow: 
-                -2px -2px 0 var(--mint-bright),  
-                 2px -2px 0 var(--mint-bright),
-                -2px  2px 0 var(--mint-bright),
-                 2px  2px 0 var(--mint-bright),
-                 4px  4px 10px rgba(0,0,0,0.3);
-            
-            transition: transform 0.3s ease;
-        }
-
-        h1:hover {
-            transform: scale(1.02);
-        }
-
-        /* --- Grid Container (Layer 3) --- */
-        .app-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 40px;
-            padding: 20px;
-            z-index: 10; /* 最前面 */
-            position: relative;
-            
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(2px);
+            gap: 8px;
+            padding: 10px 4px 8px;
             border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        /* --- Icon Button Styling --- */
-        .app-link {
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
             text-decoration: none;
-            width: 80px;
-            height: 80px;
-            
-            background-color: var(--choco-dark);
-            border-radius: 16px;
-            border: 2px solid var(--choco-light);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            color: var(--ink);
+            transition: background-color .25s;
+            animation: rise .6s var(--ease) both;
+            animation-delay: calc(var(--i) * 45ms + 120ms);
         }
-
-        .app-link i {
-            font-size: 32px;
-            color: var(--mint-main);
-            transition: color 0.3s ease;
+        .tile:hover, .tile:focus-visible { background: color-mix(in srgb, var(--surface) 55%, transparent); }
+        .tile__icon {
+            width: 66px;
+            height: 66px;
+            border-radius: 20px;
+            background: linear-gradient(180deg, #5A3B33 0%, #3B2420 55%, #2E1B17 100%);
+            color: var(--accent);
+            display: grid;
+            place-items: center;
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, .18),
+                inset 0 -4px 0 rgba(0, 0, 0, .28),
+                0 10px 18px -10px rgba(20, 12, 10, .7);
+            transition: transform .35s var(--spring), box-shadow .3s;
         }
-
-        .app-link:hover {
-            transform: translateY(-5px) scale(1.1);
-            background-color: var(--choco-light);
-            border-color: var(--mint-bright);
-            box-shadow: 0 10px 20px rgba(62, 39, 35, 0.5), 0 0 15px var(--mint-glow);
+        .tile__icon svg { width: 30px; height: 30px; stroke-width: 1.9; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 45%, transparent)); transition: transform .4s var(--spring); }
+        .tile:hover .tile__icon, .tile:focus-visible .tile__icon {
+            transform: translateY(-5px);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, .18),
+                inset 0 -4px 0 rgba(0, 0, 0, .28),
+                0 0 0 3px var(--accent-soft),
+                0 16px 26px -10px var(--glow);
         }
-
-        .app-link:hover i {
-            color: var(--mint-bright);
-        }
-
-        .app-link:active {
-            transform: translateY(0) scale(0.95);
-        }
-
-        /* --- Tooltip Styling (Revised) --- */
-        .tooltip {
+        .tile:hover .tile__icon svg { transform: rotate(-8deg) scale(1.06); }
+        .tile:active .tile__icon { transform: translateY(-1px) scale(.96); }
+        .tile__name { font-family: var(--font-ui); font-weight: 900; font-size: 13.5px; line-height: 1.1; }
+        .tile__desc { font-size: 10.5px; color: var(--ink-2); line-height: 1.3; text-align: center; min-height: 2.6em; }
+        .tile__key {
             position: absolute;
-            /* 下ではなく「上」に表示するように変更 */
-            bottom: auto; 
-            top: -50px; /* アイコンの上に配置 */
-            left: 50%;
-            transform: translateX(-50%);
-            
-            background-color: var(--mint-bright);
-            color: var(--choco-dark);
-            padding: 6px 10px;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            font-weight: bold;
-            white-space: nowrap;
-            pointer-events: none;
-            
-            border: 2px solid var(--choco-dark);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s;
-            z-index: 100; /* 他の要素より手前に */
+            top: 4px;
+            right: 8px;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--ink-3);
         }
 
-        /* Tiny triangle for tooltip (上ではなく下に配置) */
-        .tooltip::before {
-            content: '';
-            position: absolute;
-            top: auto;
-            bottom: -6px; /* 下辺 */
-            left: 50%;
-            transform: translateX(-50%);
-            border-width: 6px 6px 0 6px; /* 下向きの三角形 */
-            border-style: solid;
-            border-color: var(--choco-dark) transparent transparent transparent;
+        @media (max-width: 760px) {
+            .dock { padding: 14px 10px 10px; border-radius: 26px; }
+            .tiles { display: flex; flex-wrap: wrap; justify-content: center; row-gap: 4px; gap: 0; }
+            .tile { flex: 0 0 25%; }
+            .tile__desc, .tile__key, .dock__hint { display: none; }
+            .tile__icon { width: 58px; height: 58px; border-radius: 18px; }
+            .tile__icon svg { width: 26px; height: 26px; }
+            .clock__time { font-size: 18px; }
+            .clock { padding: 8px 12px; }
+            .home-top__tools .palette-btn { display: none; }
         }
-        
-        /* Inner triangle for color match */
-        .tooltip::after {
-            content: '';
-            position: absolute;
-            top: auto;
-            bottom: -3px; /* 枠線分ずらす */
-            left: 50%;
-            transform: translateX(-50%);
-            border-width: 4px 4px 0 4px;
-            border-style: solid;
-            border-color: var(--mint-bright) transparent transparent transparent;
-        }
-
-        /* Show Tooltip on Hover - 少し上にフワッと出るアニメーション */
-        .app-link:hover .tooltip {
-            opacity: 1;
-            visibility: visible;
-            transform: translateX(-50%) translateY(-5px);
-        }
-
-        /* --- Mobile Responsiveness --- */
-        @media (max-width: 600px) {
-            h1 {
-                font-size: 2rem;
-                margin-bottom: 20px;
-                padding: 0 10px;
-            }
-
-            .app-grid {
-                /* スマホでも常に3列を維持 */
-                grid-template-columns: repeat(3, 1fr); 
-                gap: 15px; /* 間隔を少し詰める */
-                padding: 15px;
-            }
-
-            /* スマホではアイコンを少し小さくして収まりやすくする */
-            .app-link {
-                width: 65px;
-                height: 65px;
-            }
-
-            .app-link i {
-                font-size: 26px; /* アイコンサイズも調整 */
-            }
-
-            /* ツールチップ位置の微調整（見切れ防止） */
-            .tooltip {
-                top: -45px;
-                font-size: 0.75rem;
-                padding: 4px 8px;
-            }
-        }
-        
-        @media (max-width: 350px) {
-            h1 {
-                font-size: 1.5rem;
-            }
-            /* 極小画面でも3列維持のためさらに調整 */
-            .app-grid {
-                gap: 10px;
-            }
-            .app-link {
-                width: 60px;
-                height: 60px;
-            }
+        @media (max-height: 560px) and (orientation: landscape) {
+            .tile__desc { display: none; }
+            .dock__head { padding-bottom: 6px; }
         }
     </style>
 </head>
-<body>
-    
-    <!-- Neon Sign Image (Layer 1) -->
-    <img id="neon-sign" src="W_city_neon.png" alt="Sule Workstation Box Neon">
+<body class="home">
+    <div class="city" aria-hidden="true">
+        <div class="city__layer city__day"></div>
+        <div class="city__layer city__night"></div>
+        <div class="city__shade"></div>
+        <div class="city__layer city__neon"></div>
+    </div>
 
-    <!-- Night Overlay (Layer 2) -->
-    <div id="night-overlay"></div>
+    <h1 class="sr-only">SULE WORKSTATION BOX</h1>
 
-    <!-- Theme Switcher (共通コンポーネント: theme.js が生成) -->
-    <div class="page-theme-switcher" data-theme-switcher></div>
-
-    <!-- Header / Title (Layer 3) -->
-    <header>
-        <h1>Sule Workstation Box</h1>
+    <header class="home-top">
+        <div class="clock glass" aria-live="off">
+            <span class="clock__dot" aria-hidden="true"></span>
+            <div>
+                <div class="clock__time" id="clock-time">--:--</div>
+                <div class="clock__date" id="clock-date"></div>
+            </div>
+        </div>
+        <div class="home-top__tools glass">
+            <button type="button" class="palette-btn" id="open-palette" aria-label="ツール検索・クイック計算">
+                <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7.5"/><path d="m20.5 20.5-4.2-4.2"/></svg>
+                <span class="palette-btn__label">検索・計算</span><span class="kbd" id="palette-kbd">⌘ K</span>
+            </button>
+            <div data-swb-controls style="display:flex;gap:6px;align-items:center"></div>
+        </div>
     </header>
 
-    <!-- Main Navigation Grid (Layer 3) -->
-    <main class="app-grid">
-        
-        <!-- 1. 単位変換 -->
-        <a href="unitconverter.html" class="app-link" target="_blank" aria-label="単位変換">
-            <i class="fa-solid fa-scale-balanced"></i> <!-- Scale/Balance Icon -->
-            <div class="tooltip">単位変換</div>
-        </a>
-
-        <!-- 2. ネジ一覧 -->
-        <a href="screw_chart.html" class="app-link" target="_blank" aria-label="ネジ一覧">
-            <i class="fa-solid fa-screwdriver-wrench"></i> <!-- Tool/Wrench Icon -->
-            <div class="tooltip">ネジ一覧</div>
-        </a>
-
-        <!-- 3. 公差一覧 -->
-        <a href="tolerance_chart.html" class="app-link" target="_blank" aria-label="公差一覧">
-            <i class="fa-solid fa-ruler-combined"></i> <!-- Ruler/Measurement Icon -->
-            <div class="tooltip">公差一覧</div>
-        </a>
-
-        <!-- 4. 電卓 -->
-        <a href="calculator.html" class="app-link" target="_blank" aria-label="電卓">
-            <i class="fa-solid fa-calculator"></i> <!-- Calculator Icon -->
-            <div class="tooltip">電卓</div>
-        </a>
-
-        <!-- 5. 翻訳 -->
-        <a href="https://my-translator-app-kappa.vercel.app" class="app-link" target="_blank" aria-label="翻訳">
-            <i class="fa-solid fa-language"></i> <!-- Globe/Translate Icon -->
-            <div class="tooltip">翻訳</div>
-        </a>
-
-        <!-- 6. お天気 -->
-        <a href="weather.html" class="app-link" target="_blank" aria-label="お天気">
-            <i class="fa-solid fa-cloud-sun"></i> <!-- Sun & Cloud Icon -->
-            <div class="tooltip">お天気</div>
-        </a>
-
-        <!-- 7. ドラゴンレーダーマップ -->
-        <a href="https://dragon-radar-nav.vercel.app" class="app-link" target="_blank" aria-label="ドラゴンレーダー">
-            <i class="fa-solid fa-crosshairs"></i> <!-- Radar/Target Icon -->
-            <div class="tooltip">レーダーマップ</div>
-        </a>
-
-        <!-- 8. Coming Soon -->
-        <a href="#" class="app-link" target="_blank" aria-label="Coming Soon">
-            <i class="fa-solid fa-lock"></i>
-            <div class="tooltip">Coming Soon</div>
-        </a>
-
-        <!-- 9. Coming Soon -->
-        <a href="#" class="app-link" target="_blank" aria-label="Coming Soon">
-            <i class="fa-solid fa-lock"></i>
-            <div class="tooltip">Coming Soon</div>
-        </a>
-
+    <main class="home-main">
+        <section class="dock glass" aria-label="ツール">
+            <div class="dock__head">
+                <p class="greet" id="greet">ようこそ</p>
+                <p class="dock__hint"><span class="kbd">1</span>〜<span class="kbd">7</span> でひらく</p>
+            </div>
+            <nav class="tiles" id="tiles"></nav>
+        </section>
     </main>
 
-    <!-- JavaScript for Night Mode -->
     <script>
-        function checkNightTime() {
-            const now = new Date();
-            const hour = now.getHours();
-            
-            // 18:00 (18) から 翌6:00 (6) までを夜とする
-            const isNight = hour >= 18 || hour < 6;
-            
-            if (isNight) {
-                document.body.classList.add('is-night');
-                // console.log("Night mode: ON");
-            } else {
-                document.body.classList.remove('is-night');
-                // console.log("Night mode: OFF");
+        (function () {
+            const tiles = document.getElementById('tiles');
+            tiles.innerHTML = SWB.TOOLS.map((t, i) =>
+                '<a class="tile" href="' + t.href + '" style="--i:' + i + '" aria-keyshortcuts="' + (i + 1) + '">' +
+                    '<span class="tile__icon">' + SWB.icon(t.icon) + '</span>' +
+                    '<span class="tile__name">' + t.name + '</span>' +
+                    '<span class="tile__desc">' + SWB.escape(t.desc) + '</span>' +
+                    '<span class="tile__key" aria-hidden="true">' + (i + 1) + '</span>' +
+                '</a>'
+            ).join('');
+
+            // 数字キーでツールを開く
+            document.addEventListener('keydown', e => {
+                if (e.metaKey || e.ctrlKey || e.altKey || SWB.isTyping(document.activeElement) || SWB.palette.isOpen()) return;
+                const n = Number(e.key);
+                if (n >= 1 && n <= SWB.TOOLS.length) location.href = SWB.TOOLS[n - 1].href;
+            });
+
+            document.getElementById('open-palette').addEventListener('click', () => SWB.palette.open());
+            if (!SWB.isMac) document.getElementById('palette-kbd').textContent = 'Ctrl K';
+
+            // 時計とあいさつ
+            const WEEK = ['日', '月', '火', '水', '木', '金', '土'];
+            const timeEl = document.getElementById('clock-time');
+            const dateEl = document.getElementById('clock-date');
+            const greetEl = document.getElementById('greet');
+            function greeting(h) {
+                if (h >= 5 && h < 11) return 'おはよう';
+                if (h >= 11 && h < 17) return 'こんにちは';
+                if (h >= 17 && h < 23) return 'こんばんは';
+                return '夜ふかし中？';
             }
-        }
-
-        // ページ読み込み時に即実行
-        checkNightTime();
-
-        // その後、1分ごとにチェック
-        setInterval(checkNightTime, 60000);
+            function tick() {
+                const now = new Date();
+                const hh = String(now.getHours()).padStart(2, '0');
+                const mm = String(now.getMinutes()).padStart(2, '0');
+                timeEl.innerHTML = hh + '<span>:</span>' + mm;
+                dateEl.textContent = (now.getMonth() + 1) + '月' + now.getDate() + '日（' + WEEK[now.getDay()] + '）';
+                greetEl.innerHTML = greeting(now.getHours()) + '、<b>SULE</b>。今日はなにつくる？';
+            }
+            tick();
+            setInterval(tick, 5000);
+        })();
     </script>
 </body>
 </html>

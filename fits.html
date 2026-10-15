@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>はめあい — SULE WORKSTATION BOX</title>
+    <meta name="theme-color" content="#3B2420">
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+    <link rel="stylesheet" href="assets/css/app.css">
+    <script src="assets/js/core.js"></script>
+    <script src="assets/js/expr.js" defer></script>
+    <script src="assets/js/iso286.js"></script>
+    <style>
+        .layout {
+            display: grid;
+            grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+            grid-template-areas: "in out" "pre out";
+            gap: 16px;
+            align-items: start;
+        }
+        .layout > .a-in { grid-area: in; }
+        .layout > .a-out { grid-area: out; }
+        .layout > .a-pre { grid-area: pre; }
+        @media (max-width: 960px) {
+            .layout { grid-template-columns: 1fr; grid-template-areas: "in" "out" "pre"; }
+        }
+
+        .presets { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+        .preset {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1px;
+            padding: 9px 12px;
+            border-radius: 13px;
+            border: 1.5px solid var(--line);
+            background: var(--surface-2);
+            text-align: left;
+            color: var(--ink);
+            transition: border-color .2s, background-color .2s, transform .15s;
+        }
+        .preset:hover { border-color: var(--accent); }
+        .preset:active { transform: scale(.98); }
+        .preset b { font-family: var(--font-mono); font-size: 15px; display: flex; align-items: center; gap: 6px; }
+        .preset b::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--dot); }
+        .preset span { font-size: 11.5px; color: var(--ink-3); line-height: 1.35; }
+        .preset[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+
+        .inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .inputs .field--wide { grid-column: 1 / -1; }
+        .pair { display: grid; grid-template-columns: 1.2fr 1fr; gap: 6px; }
+
+        .verdict { padding: 20px 22px; }
+        .verdict__top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .verdict__fit { font-family: var(--font-mono); font-weight: 700; font-size: 15px; color: var(--accent); }
+        .verdict__type { font-family: var(--font-ui); font-weight: 900; font-size: clamp(22px, 3vw, 28px); margin-top: 8px; }
+        .verdict__nums { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+        .verdict__nums .stat { background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .08); color: var(--on-choco); }
+        .verdict__nums .stat__label { color: color-mix(in srgb, var(--on-choco) 65%, transparent); }
+        .verdict__nums .stat__value { color: var(--accent); }
+        .verdict__nums .stat__value small { color: color-mix(in srgb, var(--on-choco) 50%, transparent); }
+        .verdict__nums .stat__sub { color: color-mix(in srgb, var(--on-choco) 50%, transparent); }
+
+        .parts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+        @media (max-width: 520px) { .parts { grid-template-columns: 1fr; } }
+        .part { padding: 16px; position: relative; overflow: hidden; }
+        .part::before { content: ""; position: absolute; left: 0; top: 0; right: 0; height: 4px; background: var(--bar); }
+        .part__head { display: flex; align-items: baseline; gap: 8px; }
+        .part__head h3 { font-size: 13px; color: var(--ink-2); }
+        .part__head .mono { font-weight: 700; font-size: 18px; }
+        .part__dev { display: flex; justify-content: space-between; align-items: center; margin: 10px 0; }
+        .part__nominal { font-family: var(--font-mono); font-weight: 700; font-size: 28px; letter-spacing: -.02em; }
+        .part__devs { font-family: var(--font-mono); font-size: 13px; text-align: right; line-height: 1.5; color: var(--ink-2); }
+        .part__lims { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .lim {
+            border: 1px solid var(--line);
+            background: var(--surface-2);
+            border-radius: 11px;
+            padding: 7px 10px;
+            text-align: left;
+            color: var(--ink);
+            cursor: copy;
+        }
+        .lim:hover { border-color: var(--accent); }
+        .lim small { display: block; font-size: 11px; color: var(--ink-3); font-family: var(--font-ui); font-weight: 700; }
+        .lim span { font-family: var(--font-mono); font-weight: 700; font-size: 15px; }
+
+        .diagram .card__body svg { width: 100%; height: auto; display: block; }
+        .diagram text { font-family: var(--font-mono); font-size: 12px; fill: var(--ink-2); }
+        .diagram .t-strong { font-weight: 700; fill: var(--ink); font-size: 13px; }
+        .diagram .t-ui { font-family: var(--font-ui); font-weight: 700; }
+
+        .err { padding: 18px; border-radius: 16px; background: color-mix(in srgb, var(--bad) 12%, transparent); color: var(--bad); font-weight: 700; display: flex; gap: 8px; align-items: center; }
+    </style>
+</head>
+<body>
+    <header data-swb-header data-tool="fits"></header>
+
+    <main class="page">
+        <div class="page-head rise">
+            <div class="page-head__icon" data-icon="fit"></div>
+            <div>
+                <h1>はめあい</h1>
+                <p>ISO 286 / JIS B 0401 の規則から公差域を計算（基準寸法 500 mm まで・IT5〜IT11）</p>
+            </div>
+        </div>
+
+        <div class="layout">
+                <section class="card rise a-in" aria-labelledby="in-title">
+                    <div class="card__head"><h2 id="in-title"><span data-icon="fit"></span>寸法と公差クラス</h2></div>
+                    <div class="card__body">
+                        <div class="inputs">
+                            <div class="field field--wide">
+                                <label for="d">基準寸法（直径）</label>
+                                <div class="input-unit"><input class="input input--xl" id="d" type="text" inputmode="decimal" value="10" autocomplete="off"><span>mm</span></div>
+                            </div>
+                            <div class="field">
+                                <label for="h-letter">穴</label>
+                                <div class="pair"><select class="select mono" id="h-letter" aria-label="穴の種類"></select><select class="select mono" id="h-grade" aria-label="穴の等級"></select></div>
+                            </div>
+                            <div class="field">
+                                <label for="s-letter">軸</label>
+                                <div class="pair"><select class="select mono" id="s-letter" aria-label="軸の種類"></select><select class="select mono" id="s-grade" aria-label="軸の等級"></select></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="stack a-out" id="out"></div>
+
+                <section class="card rise a-pre" aria-labelledby="preset-title">
+                    <div class="card__head"><h2 id="preset-title"><span data-icon="star"></span>よく使うはめあい</h2><span class="hint">用途は目安</span></div>
+                    <div class="card__body"><div class="presets" id="presets"></div></div>
+                </section>
+        </div>
+
+        <p class="small faint" style="margin-top:20px">※ 規格の基本公差と基礎となる寸法許容差から計算しています。実際の加工は図面指示に従ってください。</p>
+    </main>
+
+    <script>
+        (function () {
+            const ISO = SWB.iso286;
+            const $ = id => document.getElementById(id);
+            const PRESETS = [
+                ['H7', 'g6', 'すべり・精密回転', 'ok'],
+                ['H7', 'h6', '位置決め・手で入る', 'ok'],
+                ['H8', 'f7', '回転・すべり（一般）', 'ok'],
+                ['H9', 'd9', 'ゆるいすきま', 'ok'],
+                ['H7', 'js6', '軽い打ち込み', 'warn'],
+                ['H7', 'k6', 'ベアリング・ギヤ固定', 'warn'],
+                ['H7', 'm6', 'ノックピン', 'warn'],
+                ['H7', 'n6', '強めの中間', 'warn'],
+                ['H7', 'p6', '軽圧入', 'bad'],
+                ['H7', 'r6', '圧入', 'bad'],
+                ['H7', 's6', '強圧入・焼きばめ', 'bad']
+            ];
+            const TYPE = {
+                clearance: { label: 'すきまばめ', en: 'Clearance', badge: 'badge--ok' },
+                transition: { label: '中間ばめ', en: 'Transition', badge: 'badge--warn' },
+                interference: { label: 'しまりばめ', en: 'Interference', badge: 'badge--bad' }
+            };
+
+            const saved = SWB.store.get('swb-fits', {});
+            const state = { d: saved.d || '10', hole: saved.hole || 'H7', shaft: saved.shaft || 'g6' };
+            const qFit = (SWB.params.get('fit') || '').split('/');
+            if (qFit.length === 2 && ISO.parseClass(qFit[0]) && ISO.parseClass(qFit[1])) { state.hole = qFit[0]; state.shaft = qFit[1]; }
+            if (SWB.params.get('d')) state.d = SWB.params.get('d');
+
+            const opt = list => list.map(v => '<option value="' + v + '">' + v + '</option>').join('');
+            $('h-letter').innerHTML = opt(ISO.HOLE_LETTERS);
+            $('s-letter').innerHTML = opt(ISO.SHAFT_LETTERS);
+            $('h-grade').innerHTML = opt(ISO.GRADES);
+            $('s-grade').innerHTML = opt(ISO.GRADES);
+
+            const dotColor = { ok: 'var(--ok)', warn: 'var(--warn)', bad: 'var(--bad)' };
+            $('presets').innerHTML = PRESETS.map(p =>
+                '<button type="button" class="preset" data-fit="' + p[0] + '/' + p[1] + '" style="--dot:' + dotColor[p[3]] + '"><b>' + p[0] + '/' + p[1] + '</b><span>' + p[2] + '</span></button>'
+            ).join('');
+            $('presets').addEventListener('click', e => {
+                const b = e.target.closest('[data-fit]');
+                if (!b) return;
+                [state.hole, state.shaft] = b.dataset.fit.split('/');
+                syncInputs();
+                update();
+            });
+
+            function syncInputs() {
+                const h = ISO.parseClass(state.hole);
+                const s = ISO.parseClass(state.shaft);
+                $('h-letter').value = h.letter; $('h-grade').value = h.grade;
+                $('s-letter').value = s.letter; $('s-grade').value = s.grade;
+                $('d').value = state.d;
+            }
+            ['h-letter', 'h-grade'].forEach(id => $(id).addEventListener('change', () => { state.hole = $('h-letter').value + $('h-grade').value; update(); }));
+            ['s-letter', 's-grade'].forEach(id => $(id).addEventListener('change', () => { state.shaft = $('s-letter').value + $('s-grade').value; update(); }));
+            $('d').addEventListener('input', () => { state.d = $('d').value; update(); });
+
+            const um = v => (v > 0 ? '+' : v < 0 ? '−' : '') + SWB.fmt(Math.abs(v), 6, { group: false });
+            const devMm = v => v === 0 ? '0' : (v > 0 ? '+' : '−') + (Math.abs(v) / 1000).toFixed(Math.abs(v) % 1 ? 4 : 3);
+            const lim = v => v.toFixed(Math.abs(v * 1e4 - Math.round(v * 1e3) * 10) > 1e-6 ? 4 : 3);
+
+            function parseD() {
+                const raw = String(state.d).trim();
+                if (/^\d+(\.\d+)?$/.test(raw)) return Number(raw);
+                const r = SWB.expr ? SWB.expr.evaluate(raw) : { ok: false };
+                return r.ok ? r.value : NaN;
+            }
+
+            function update() {
+                SWB.store.set('swb-fits', state);
+                history.replaceState(null, '', '?fit=' + encodeURIComponent(state.hole + '/' + state.shaft) + '&d=' + encodeURIComponent(state.d));
+                const fitKey = state.hole + '/' + state.shaft;
+                $('presets').querySelectorAll('[data-fit]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.fit === fitKey)));
+
+                const d = parseD();
+                const r = ISO.fit(state.hole, state.shaft, d);
+                const out = $('out');
+                if (r.error) {
+                    out.innerHTML = '<div class="err">' + SWB.icon('info') + '<span></span></div>';
+                    out.querySelector('.err span').textContent = r.error;
+                    return;
+                }
+                const t = TYPE[r.type];
+                let nums;
+                if (r.type === 'clearance') {
+                    nums = [['最大すきま', r.maxClearance], ['最小すきま', r.minClearance]];
+                } else if (r.type === 'interference') {
+                    nums = [['最大しめしろ', r.maxInterference], ['最小しめしろ', r.minInterference]];
+                } else {
+                    nums = [['最大すきま', r.maxClearance], ['最大しめしろ', r.maxInterference]];
+                }
+                out.innerHTML =
+                    '<section class="card card--choco verdict rise" aria-live="polite">' +
+                        '<div class="verdict__top"><span class="badge ' + t.badge + '">' + t.en + '</span><span class="verdict__fit">φ' + SWB.fmt(d, 8, { group: false }) + ' ' + r.hole.cls + '/' + r.shaft.cls + '</span><span class="small" style="margin-left:auto;opacity:.6">寸法区分 ' + r.range + ' mm</span></div>' +
+                        '<div class="verdict__type">' + t.label + '</div>' +
+                        '<div class="verdict__nums">' + nums.map(n =>
+                            '<button type="button" class="stat" data-copy="' + (n[1] / 1000) + '" data-label="' + n[0] + '"><div class="stat__label">' + n[0] + '</div>' +
+                            '<div class="stat__value">' + SWB.fmt(n[1], 6, { group: false }) + '<small>µm</small></div>' +
+                            '<div class="stat__sub">' + (n[1] / 1000).toFixed(n[1] % 1 ? 4 : 3) + ' mm</div></button>'
+                        ).join('') + '</div>' +
+                    '</section>' +
+                    '<div class="parts">' + part('穴', r.hole, d, 'var(--accent)') + part('軸', r.shaft, d, 'var(--choco)') + '</div>' +
+                    '<section class="card diagram"><div class="card__head"><h2>' + SWB.icon('fit') + '公差域</h2><span class="hint">単位 µm ／ 0 = 基準寸法</span></div><div class="card__body">' + diagram(r) + '</div></section>';
+            }
+
+            function part(name, p, d, bar) {
+                return '<section class="card part" style="--bar:' + bar + '">' +
+                    '<div class="part__head"><h3>' + name + '</h3><span class="mono">' + p.cls + '</span><span class="faint small" style="margin-left:auto">IT ' + p.it + ' µm</span></div>' +
+                    '<div class="part__dev"><span class="part__nominal">φ' + SWB.fmt(d, 8, { group: false }) + '</span>' +
+                    '<span class="part__devs">' + devMm(p.upper) + '<br>' + devMm(p.lower) + '</span></div>' +
+                    '<div class="part__lims">' +
+                        '<button type="button" class="lim" data-copy="' + lim(p.max) + '" data-label="' + name + ' 最大"><small>最大</small><span>' + lim(p.max) + '</span></button>' +
+                        '<button type="button" class="lim" data-copy="' + lim(p.min) + '" data-label="' + name + ' 最小"><small>最小</small><span>' + lim(p.min) + '</span></button>' +
+                    '</div>' +
+                '</section>';
+            }
+
+            function niceStep(range) {
+                const raw = range / 5;
+                const p = Math.pow(10, Math.floor(Math.log10(raw)));
+                const n = raw / p;
+                return (n < 1.5 ? 1 : n < 3.5 ? 2 : n < 7.5 ? 5 : 10) * p;
+            }
+
+            function diagram(r) {
+                const W = 640, H = 280, top = 22, bottom = 30, left = 54, right = 18;
+                const vals = [0, r.hole.upper, r.hole.lower, r.shaft.upper, r.shaft.lower];
+                let vmax = Math.max.apply(null, vals);
+                let vmin = Math.min.apply(null, vals);
+                const pad = Math.max(4, (vmax - vmin) * 0.18);
+                vmax += pad; vmin -= pad;
+                const y = v => top + (vmax - v) / (vmax - vmin) * (H - top - bottom);
+                const step = niceStep(vmax - vmin);
+                let ticks = '';
+                for (let v = Math.ceil(vmin / step) * step; v <= vmax; v += step) {
+                    const yy = y(v).toFixed(1);
+                    ticks += '<line x1="' + left + '" x2="' + (W - right) + '" y1="' + yy + '" y2="' + yy + '" stroke="var(--line)" />' +
+                        '<text x="' + (left - 8) + '" y="' + yy + '" text-anchor="end" dominant-baseline="middle">' + (Math.abs(v) < 1e-9 ? 0 : SWB.fmt(v, 4, { group: false })) + '</text>';
+                }
+                const zone = (x, w, p, fill, stroke, label, textFill) => {
+                    const y1 = y(p.upper), y2 = y(p.lower);
+                    const h = Math.max(2, y2 - y1);
+                    return '<rect x="' + x + '" y="' + y1.toFixed(1) + '" width="' + w + '" height="' + h.toFixed(1) + '" rx="6" fill="' + fill + '" stroke="' + stroke + '" stroke-width="2" />' +
+                        (h > 22 ? '<text x="' + (x + w / 2) + '" y="' + ((y1 + y2) / 2).toFixed(1) + '" text-anchor="middle" dominant-baseline="middle" class="t-strong t-ui" style="fill:' + textFill + '">' + label + '</text>' : '') +
+                        '<text x="' + (x + w + 8) + '" y="' + y1.toFixed(1) + '" dominant-baseline="middle">' + um(p.upper) + '</text>' +
+                        '<text x="' + (x + w + 8) + '" y="' + (y1 + h).toFixed(1) + '" dominant-baseline="middle">' + um(p.lower) + '</text>' +
+                        '<text x="' + (x + w / 2) + '" y="' + (H - 10) + '" text-anchor="middle" class="t-strong">' + p.cls + '</text>';
+                };
+                const zeroY = y(0).toFixed(1);
+                return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="穴と軸の公差域の図">' +
+                    '<defs><pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="var(--accent-soft)"/><line x1="0" y1="0" x2="0" y2="8" stroke="var(--accent)" stroke-width="3" /></pattern></defs>' +
+                    ticks +
+                    '<line x1="' + left + '" x2="' + (W - right) + '" y1="' + zeroY + '" y2="' + zeroY + '" stroke="var(--ink)" stroke-width="2" />' +
+                    '<text x="' + (W - right) + '" y="' + (Number(zeroY) - 7) + '" text-anchor="end" class="t-strong t-ui">基準線</text>' +
+                    zone(150, 130, r.hole, 'url(#hatch)', 'var(--accent)', '穴', 'var(--ink)') +
+                    zone(380, 130, r.shaft, 'var(--choco)', 'var(--choco)', '軸', 'var(--accent)') +
+                '</svg>';
+            }
+
+            document.addEventListener('click', e => {
+                const b = e.target.closest('#out [data-copy]');
+                if (b) SWB.copy(b.dataset.copy, b.dataset.label);
+            });
+
+            syncInputs();
+            document.addEventListener('DOMContentLoaded', update);
+        })();
+    </script>
+</body>
+</html>

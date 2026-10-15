@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>単位変換 — SULE WORKSTATION BOX</title>
+    <meta name="theme-color" content="#3B2420">
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+    <link rel="stylesheet" href="assets/css/app.css">
+    <script src="assets/js/core.js"></script>
+    <script src="assets/js/expr.js" defer></script>
+    <style>
+        .cats { margin-bottom: 16px; }
+
+        .conv {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            border-radius: var(--radius-l);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--line);
+        }
+        .conv__panel { padding: 20px 22px 22px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+        .conv__from { background: var(--choco); }
+        .conv__to { background: var(--accent-soft); }
+        html[data-mode="night"] .conv__to { background: color-mix(in srgb, var(--accent) 14%, var(--surface)); }
+        .conv__label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: var(--font-ui);
+            font-weight: 700;
+            font-size: 12px;
+            letter-spacing: .08em;
+            color: var(--ink-2);
+        }
+        .conv__label::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+        .conv__to .conv__label::before { background: var(--ink); }
+        .conv__eval { margin-left: auto; font-family: var(--font-mono); letter-spacing: 0; color: var(--accent); }
+        .conv__eval.is-error { color: #FF9B8F; }
+
+        .conv__mid {
+            display: grid;
+            place-items: center;
+            background: linear-gradient(90deg, var(--choco) 50%, transparent 50%);
+            width: 0;
+            position: relative;
+            z-index: 2;
+        }
+        html[data-mode="night"] .conv__mid { background: linear-gradient(90deg, var(--choco) 50%, color-mix(in srgb, var(--accent) 14%, var(--surface)) 50%); }
+        .swap-btn {
+            position: absolute;
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            border: 4px solid var(--bg);
+            background: var(--surface);
+            color: var(--ink);
+            display: grid;
+            place-items: center;
+            box-shadow: var(--shadow);
+            transition: transform .4s var(--spring);
+        }
+        .swap-btn:hover { transform: rotate(180deg); }
+        .swap-btn svg { width: 20px; height: 20px; }
+
+        .result {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-height: 64px;
+            border-bottom: 2px solid color-mix(in srgb, var(--ink) 18%, transparent);
+        }
+        .result__value {
+            flex: 1;
+            min-width: 0;
+            font-family: var(--font-mono);
+            font-weight: 700;
+            font-size: clamp(26px, 4vw, 34px);
+            letter-spacing: -.02em;
+            line-height: 1.2;
+            overflow-wrap: anywhere;
+            border: 0;
+            background: none;
+            padding: 0;
+            text-align: left;
+            cursor: copy;
+        }
+        .result__unit { font-family: var(--font-mono); color: var(--ink-2); font-size: 15px; }
+
+        @media (max-width: 760px) {
+            .conv { grid-template-columns: 1fr; }
+            .conv__mid { width: auto; height: 0; background: linear-gradient(180deg, var(--choco) 50%, transparent 50%); }
+            html[data-mode="night"] .conv__mid { background: none; }
+            .swap-btn:hover { transform: none; }
+            .swap-btn svg { transform: rotate(90deg); }
+        }
+
+        .all-head { display: flex; align-items: center; gap: 10px; margin: 28px 2px 12px; flex-wrap: wrap; }
+        .all-head h2 { font-size: 16px; font-weight: 900; }
+        .all-head .seg button { padding: 5px 10px; font-size: 12px; }
+
+        .all {
+            display: grid;
+            gap: 8px;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        }
+        .u-row {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            border-radius: 16px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            transition: border-color .2s, transform .15s, background-color .2s;
+            min-width: 0;
+        }
+        .u-row:hover { border-color: var(--accent); }
+        .u-row.is-from { background: var(--choco); border-color: transparent; color: var(--on-choco); }
+        .u-row.is-to { background: var(--accent-soft); border-color: transparent; }
+        .u-row__copy {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            padding: 11px 4px 11px 14px;
+            border: 0;
+            background: none;
+            text-align: left;
+            cursor: copy;
+            color: inherit;
+        }
+        .u-row__val { font-family: var(--font-mono); font-weight: 700; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .u-row__name { font-size: 12px; color: var(--ink-3); display: flex; gap: 6px; align-items: center; }
+        .u-row.is-from .u-row__name { color: color-mix(in srgb, var(--on-choco) 60%, transparent); }
+        .u-row__name b { font-family: var(--font-mono); color: var(--ink-2); font-weight: 700; }
+        .u-row.is-from .u-row__name b { color: var(--accent); }
+        .u-row__tag { font-family: var(--font-ui); font-size: 10px; font-weight: 900; padding: 1px 6px; border-radius: 6px; background: var(--accent); color: var(--on-accent); }
+        .u-row__set {
+            width: 34px;
+            height: 34px;
+            margin-right: 8px;
+            border-radius: 10px;
+            border: 0;
+            background: transparent;
+            color: var(--ink-3);
+            display: grid;
+            place-items: center;
+            flex: none;
+        }
+        .u-row__set:hover { background: var(--accent-wash); color: var(--ink); }
+        .u-row.is-from .u-row__set { visibility: hidden; }
+        .u-row__set svg { width: 16px; height: 16px; }
+    </style>
+</head>
+<body>
+    <header data-swb-header data-tool="units"></header>
+
+    <main class="page">
+        <div class="page-head rise">
+            <div class="page-head__icon" data-icon="ruler"></div>
+            <div>
+                <h1>単位変換</h1>
+                <p>入力欄は式もOK — <span class="mono">3/8</span>・<span class="mono">1 1/2</span>・<span class="mono">2×25.4</span></p>
+            </div>
+        </div>
+
+        <div class="seg cats rise" id="cats" role="tablist" aria-label="カテゴリ"></div>
+
+        <section class="conv rise" aria-label="変換">
+            <div class="conv__panel conv__from card--choco">
+                <label class="conv__label" for="in-value">変換元<span class="conv__eval" id="in-eval"></span></label>
+                <input class="input input--xl" id="in-value" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" value="1">
+                <select class="select" id="in-unit" aria-label="変換元の単位"></select>
+            </div>
+            <div class="conv__mid">
+                <button type="button" class="swap-btn" id="swap" aria-label="入れ替え" title="入れ替え (Alt+S)"></button>
+            </div>
+            <div class="conv__panel conv__to">
+                <span class="conv__label">変換先</span>
+                <div class="result">
+                    <button type="button" class="result__value" id="out-value" title="クリックでコピー">—</button>
+                    <span class="result__unit" id="out-sym"></span>
+                </div>
+                <select class="select" id="out-unit" aria-label="変換先の単位"></select>
+            </div>
+        </section>
+
+        <div class="all-head">
+            <h2>すべての単位</h2>
+            <span class="faint small">タップでコピー</span>
+            <span class="spacer"></span>
+            <span class="label">有効数字</span>
+            <div class="seg" id="sig" role="group" aria-label="有効数字"></div>
+        </div>
+        <div class="all" id="all"></div>
+    </main>
+
+    <script>
+        (function () {
+            const PI = Math.PI;
+            // f: 基本単位への係数。to/from を持つものは非線形 (温度・サーボ速度)
+            const CATS = [
+                { id: 'length', name: '長さ', base: 'm', def: ['mm', 'in'], units: [
+                    { id: 'mm', sym: 'mm', name: 'ミリメートル', f: 1e-3 },
+                    { id: 'cm', sym: 'cm', name: 'センチメートル', f: 1e-2 },
+                    { id: 'm', sym: 'm', name: 'メートル', f: 1 },
+                    { id: 'km', sym: 'km', name: 'キロメートル', f: 1e3 },
+                    { id: 'um', sym: 'µm', name: 'マイクロメートル', f: 1e-6 },
+                    { id: 'in', sym: 'in', name: 'インチ', f: 0.0254 },
+                    { id: 'ft', sym: 'ft', name: 'フィート', f: 0.3048 },
+                    { id: 'yd', sym: 'yd', name: 'ヤード', f: 0.9144 },
+                    { id: 'mi', sym: 'mi', name: 'マイル', f: 1609.344 },
+                    { id: 'mil', sym: 'mil', name: 'ミル (1/1000 in)', f: 2.54e-5 },
+                    { id: 'ly', sym: 'ly', name: '光年', f: 9.4607304725808e15 }
+                ] },
+                { id: 'mass', name: '質量', base: 'kg', def: ['g', 'oz'], units: [
+                    { id: 'mg', sym: 'mg', name: 'ミリグラム', f: 1e-6 },
+                    { id: 'g', sym: 'g', name: 'グラム', f: 1e-3 },
+                    { id: 'kg', sym: 'kg', name: 'キログラム', f: 1 },
+                    { id: 't', sym: 't', name: 'トン', f: 1e3 },
+                    { id: 'oz', sym: 'oz', name: 'オンス', f: 0.028349523125 },
+                    { id: 'lb', sym: 'lb', name: 'ポンド', f: 0.45359237 }
+                ] },
+                { id: 'force', name: '力', base: 'N', def: ['N', 'kgf'], units: [
+                    { id: 'mN', sym: 'mN', name: 'ミリニュートン', f: 1e-3 },
+                    { id: 'N', sym: 'N', name: 'ニュートン', f: 1 },
+                    { id: 'kN', sym: 'kN', name: 'キロニュートン', f: 1e3 },
+                    { id: 'gf', sym: 'gf', name: '重量グラム', f: 0.00980665 },
+                    { id: 'kgf', sym: 'kgf', name: '重量キログラム', f: 9.80665 },
+                    { id: 'ozf', sym: 'ozf', name: '重量オンス', f: 0.27801385095378125 },
+                    { id: 'lbf', sym: 'lbf', name: '重量ポンド', f: 4.4482216152605 }
+                ] },
+                { id: 'torque', name: 'トルク', base: 'N·m', def: ['kgfcm', 'Nm'], units: [
+                    { id: 'Nm', sym: 'N·m', name: 'ニュートンメートル', f: 1 },
+                    { id: 'Ncm', sym: 'N·cm', name: 'ニュートンセンチ', f: 1e-2 },
+                    { id: 'Nmm', sym: 'N·mm', name: 'ニュートンミリ', f: 1e-3 },
+                    { id: 'mNm', sym: 'mN·m', name: 'ミリニュートンメートル', f: 1e-3 },
+                    { id: 'kgfcm', sym: 'kgf·cm', name: 'サーボでよく使う', f: 0.0980665 },
+                    { id: 'kgfm', sym: 'kgf·m', name: '重量キログラムメートル', f: 9.80665 },
+                    { id: 'gfcm', sym: 'gf·cm', name: '小型モーター', f: 9.80665e-5 },
+                    { id: 'ozfin', sym: 'ozf·in', name: 'オンスインチ', f: 0.00706155181422604 },
+                    { id: 'lbfin', sym: 'lbf·in', name: 'ポンドインチ', f: 0.1129848290276167 },
+                    { id: 'lbfft', sym: 'lbf·ft', name: 'ポンドフィート', f: 1.3558179483314004 }
+                ] },
+                { id: 'pressure', name: '圧力', base: 'Pa', def: ['MPa', 'kgfcm2'], units: [
+                    { id: 'Pa', sym: 'Pa', name: 'パスカル', f: 1 },
+                    { id: 'hPa', sym: 'hPa', name: 'ヘクトパスカル', f: 100 },
+                    { id: 'kPa', sym: 'kPa', name: 'キロパスカル', f: 1e3 },
+                    { id: 'MPa', sym: 'MPa', name: 'メガパスカル (= N/mm²)', f: 1e6 },
+                    { id: 'bar', sym: 'bar', name: 'バール', f: 1e5 },
+                    { id: 'mbar', sym: 'mbar', name: 'ミリバール', f: 100 },
+                    { id: 'atm', sym: 'atm', name: '標準気圧', f: 101325 },
+                    { id: 'kgfcm2', sym: 'kgf/cm²', name: '工学気圧', f: 98066.5 },
+                    { id: 'psi', sym: 'psi', name: 'ポンド毎平方インチ', f: 6894.757293168361 },
+                    { id: 'mmHg', sym: 'mmHg', name: '水銀柱ミリメートル', f: 133.322387415 },
+                    { id: 'mmH2O', sym: 'mmH₂O', name: '水柱ミリメートル', f: 9.80665 }
+                ] },
+                { id: 'temp', name: '温度', base: 'K', def: ['C', 'F'], units: [
+                    { id: 'C', sym: '°C', name: 'セルシウス', to: v => v + 273.15, from: k => k - 273.15 },
+                    { id: 'F', sym: '°F', name: 'ファーレンハイト', to: v => (v - 32) * 5 / 9 + 273.15, from: k => (k - 273.15) * 9 / 5 + 32 },
+                    { id: 'K', sym: 'K', name: 'ケルビン', f: 1 }
+                ] },
+                { id: 'angle', name: '角度', base: 'rad', def: ['deg', 'rad'], units: [
+                    { id: 'deg', sym: '°', name: '度', f: PI / 180 },
+                    { id: 'rad', sym: 'rad', name: 'ラジアン', f: 1 },
+                    { id: 'rev', sym: 'rev', name: '回転', f: 2 * PI },
+                    { id: 'arcmin', sym: '′', name: '分', f: PI / 10800 },
+                    { id: 'arcsec', sym: '″', name: '秒', f: PI / 648000 },
+                    { id: 'grad', sym: 'gon', name: 'グラード', f: PI / 200 }
+                ] },
+                { id: 'speed', name: '速度', base: 'm/s', def: ['kmh', 'ms'], units: [
+                    { id: 'mms', sym: 'mm/s', name: 'ミリ毎秒', f: 1e-3 },
+                    { id: 'ms', sym: 'm/s', name: 'メートル毎秒', f: 1 },
+                    { id: 'mmin', sym: 'm/min', name: 'メートル毎分', f: 1 / 60 },
+                    { id: 'kmh', sym: 'km/h', name: 'キロメートル毎時', f: 1 / 3.6 },
+                    { id: 'mph', sym: 'mph', name: 'マイル毎時', f: 0.44704 },
+                    { id: 'kn', sym: 'kn', name: 'ノット', f: 1852 / 3600 },
+                    { id: 'fts', sym: 'ft/s', name: 'フィート毎秒', f: 0.3048 }
+                ] },
+                { id: 'rotation', name: '回転', base: 'rad/s', def: ['s60', 'rpm'], units: [
+                    { id: 'rpm', sym: 'rpm', name: '回転毎分', f: 2 * PI / 60 },
+                    { id: 'rps', sym: 'rps', name: '回転毎秒 (Hz)', f: 2 * PI },
+                    { id: 'rads', sym: 'rad/s', name: 'ラジアン毎秒', f: 1 },
+                    { id: 'degs', sym: '°/s', name: '度毎秒', f: PI / 180 },
+                    { id: 's60', sym: 's/60°', name: 'サーボの速度表記', to: v => (60 / v) * PI / 180, from: w => 60 / (w * 180 / PI) }
+                ] }
+            ];
+
+            const $ = id => document.getElementById(id);
+            const els = { cats: $('cats'), inValue: $('in-value'), inUnit: $('in-unit'), outUnit: $('out-unit'), outValue: $('out-value'), outSym: $('out-sym'), inEval: $('in-eval'), all: $('all'), swap: $('swap'), sig: $('sig') };
+            els.swap.innerHTML = SWB.icon('swapH');
+
+            const saved = SWB.store.get('swb-units', {});
+            const state = {
+                cat: saved.cat || 'length',
+                sig: saved.sig || 7,
+                per: saved.per || {} // カテゴリごとの { from, to, value }
+            };
+            const qCat = SWB.params.get('cat');
+            if (qCat && CATS.some(c => c.id === qCat)) state.cat = qCat;
+
+            const cat = () => CATS.find(c => c.id === state.cat);
+            const unit = id => cat().units.find(u => u.id === id);
+            const toBase = (u, v) => (u.to ? u.to(v) : v * u.f);
+            const fromBase = (u, b) => (u.from ? u.from(b) : b / u.f);
+            function cur() {
+                const c = cat();
+                const p = state.per[c.id] || {};
+                return {
+                    from: c.units.some(u => u.id === p.from) ? p.from : c.def[0],
+                    to: c.units.some(u => u.id === p.to) ? p.to : c.def[1],
+                    value: p.value !== undefined ? p.value : '1'
+                };
+            }
+            function setCur(patch) {
+                state.per[state.cat] = Object.assign(cur(), patch);
+                save();
+            }
+            function save() { SWB.store.set('swb-units', state); }
+
+            // カテゴリタブ
+            els.cats.innerHTML = CATS.map(c => '<button type="button" role="tab" data-cat="' + c.id + '">' + c.name + '</button>').join('');
+            els.cats.addEventListener('click', e => {
+                const b = e.target.closest('[data-cat]');
+                if (!b) return;
+                state.cat = b.dataset.cat;
+                save();
+                loadCat();
+            });
+
+            // 有効数字
+            els.sig.innerHTML = [5, 7, 10].map(n => '<button type="button" data-sig="' + n + '">' + n + '</button>').join('');
+            els.sig.addEventListener('click', e => {
+                const b = e.target.closest('[data-sig]');
+                if (!b) return;
+                state.sig = Number(b.dataset.sig);
+                save();
+                render();
+            });
+
+            function loadCat() {
+                const c = cat();
+                els.cats.querySelectorAll('[data-cat]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.cat === c.id)));
+                const opts = c.units.map(u => '<option value="' + u.id + '">' + u.sym + '  —  ' + u.name + '</option>').join('');
+                els.inUnit.innerHTML = opts;
+                els.outUnit.innerHTML = opts;
+                const s = cur();
+                els.inUnit.value = s.from;
+                els.outUnit.value = s.to;
+                els.inValue.value = s.value;
+                history.replaceState(null, '', '?cat=' + c.id);
+                render();
+            }
+
+            function parseInput() {
+                const raw = els.inValue.value.trim();
+                if (!raw) return { ok: false, empty: true };
+                if (/^-?\d+(\.\d+)?$/.test(raw)) return { ok: true, value: Number(raw), plain: true };
+                return SWB.expr.evaluate(raw);
+            }
+
+            function render() {
+                els.sig.querySelectorAll('[data-sig]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.sig) === state.sig)));
+                const s = cur();
+                const from = unit(s.from);
+                const to = unit(s.to);
+                const parsed = window.SWB.expr ? parseInput() : { ok: true, value: Number(els.inValue.value), plain: true };
+
+                els.inEval.classList.toggle('is-error', !parsed.ok && !parsed.empty);
+                els.inEval.textContent = parsed.ok ? (parsed.plain ? '' : '= ' + SWB.fmt(parsed.value, 10)) : (parsed.empty ? '' : parsed.error || '式を確認');
+
+                const base = parsed.ok ? toBase(from, parsed.value) : NaN;
+                const outV = fromBase(to, base);
+                els.outValue.textContent = parsed.ok ? SWB.fmt(outV, state.sig) : '—';
+                els.outValue.dataset.raw = parsed.ok ? SWB.fmt(outV, state.sig, { group: false }) : '';
+                els.outSym.textContent = to.sym;
+
+                els.all.innerHTML = cat().units.map(u => {
+                    const v = fromBase(u, base);
+                    const cls = u.id === s.from ? ' is-from' : u.id === s.to ? ' is-to' : '';
+                    const tag = u.id === s.from ? '<span class="u-row__tag">FROM</span>' : u.id === s.to ? '<span class="u-row__tag">TO</span>' : '';
+                    return '<div class="u-row' + cls + '">' +
+                        '<button type="button" class="u-row__copy" data-copy="' + u.id + '" title="コピー">' +
+                            '<span class="u-row__val">' + (parsed.ok ? SWB.fmt(v, state.sig) : '—') + '</span>' +
+                            '<span class="u-row__name"><b>' + SWB.escape(u.sym) + '</b>' + SWB.escape(u.name) + tag + '</span>' +
+                        '</button>' +
+                        '<button type="button" class="u-row__set" data-set="' + u.id + '" title="変換先にする" aria-label="' + SWB.escape(u.sym) + ' を変換先にする">' + SWB.icon('arrowDown') + '</button>' +
+                    '</div>';
+                }).join('');
+            }
+
+            els.all.addEventListener('click', e => {
+                const copy = e.target.closest('[data-copy]');
+                const set = e.target.closest('[data-set]');
+                const s = cur();
+                const parsed = parseInput();
+                if (copy && parsed.ok) {
+                    const u = unit(copy.dataset.copy);
+                    SWB.copy(SWB.fmt(fromBase(u, toBase(unit(s.from), parsed.value)), state.sig, { group: false }), u.sym);
+                } else if (set) {
+                    setCur({ to: set.dataset.set });
+                    els.outUnit.value = set.dataset.set;
+                    render();
+                }
+            });
+
+            els.inValue.addEventListener('input', () => { setCur({ value: els.inValue.value }); render(); });
+            els.inUnit.addEventListener('change', () => {
+                const s = cur();
+                setCur(els.inUnit.value === s.to ? { from: els.inUnit.value, to: s.from } : { from: els.inUnit.value });
+                els.outUnit.value = cur().to;
+                render();
+            });
+            els.outUnit.addEventListener('change', () => {
+                const s = cur();
+                setCur(els.outUnit.value === s.from ? { to: els.outUnit.value, from: s.to } : { to: els.outUnit.value });
+                els.inUnit.value = cur().from;
+                render();
+            });
+            function swap() {
+                const s = cur();
+                const raw = els.outValue.dataset.raw;
+                setCur({ from: s.to, to: s.from, value: raw && raw !== '' ? raw : s.value });
+                els.inUnit.value = cur().from;
+                els.outUnit.value = cur().to;
+                els.inValue.value = cur().value;
+                render();
+            }
+            els.swap.addEventListener('click', swap);
+            els.outValue.addEventListener('click', () => {
+                if (els.outValue.dataset.raw) SWB.copy(els.outValue.dataset.raw, unit(cur().to).sym);
+            });
+            document.addEventListener('keydown', e => {
+                if (e.altKey && e.code === 'KeyS') { e.preventDefault(); swap(); }
+            });
+
+            document.addEventListener('DOMContentLoaded', () => {
+                loadCat();
+                els.inValue.focus();
+                els.inValue.select();
+            });
+        })();
+    </script>
+</body>
+</html>

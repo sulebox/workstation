@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>ネジ — SULE WORKSTATION BOX</title>
+    <meta name="theme-color" content="#3B2420">
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+    <link rel="stylesheet" href="assets/css/app.css">
+    <script src="assets/js/core.js"></script>
+    <script src="assets/js/expr.js" defer></script>
+    <script src="assets/js/screw-drawings.js"></script>
+    <style>
+        .sizes { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+        .size-btn {
+            min-width: 64px;
+            height: 48px;
+            padding: 0 12px;
+            border-radius: 14px;
+            border: 1.5px solid var(--line-strong);
+            background: var(--surface);
+            font-family: var(--font-ui);
+            font-weight: 900;
+            font-size: 17px;
+            color: var(--ink-2);
+            transition: all .2s var(--ease);
+        }
+        .size-btn:hover { border-color: var(--accent); color: var(--ink); transform: translateY(-1px); }
+        .size-btn[aria-pressed="true"] {
+            background: var(--choco);
+            border-color: var(--choco);
+            color: var(--accent);
+            box-shadow: 0 8px 18px -10px var(--glow), inset 0 -3px 0 rgba(0, 0, 0, .25);
+        }
+        html[data-mode="night"] .size-btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+        .cheat .stats { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+        .comp { display: flex; align-items: center; gap: 8px; }
+        .comp .input-unit .input { width: 104px; height: 34px; font-size: 14px; padding: 0 38px 0 10px; border-radius: 10px; text-align: right; }
+        .comp .input-unit > span { right: 11px; font-size: 12px; }
+        .comp-on { color: var(--accent-ink); font-weight: 700; }
+
+        .types-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 16px; align-items: start; }
+        @media (max-width: 900px) { .types-grid { grid-template-columns: 1fr; } }
+
+        .drawing {
+            position: relative;
+            border-radius: 16px;
+            background:
+                linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 20px 20px,
+                linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 20px 20px,
+                var(--surface-2);
+            border: 1px solid var(--line);
+            aspect-ratio: 640 / 330;
+            overflow: hidden;
+        }
+        /* 製図は screw-drawings.js が寸法データから描く。色はテーマのトークン */
+        .drawing__svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+        .drawing__svg .body { fill: var(--surface); stroke: var(--ink); stroke-width: 2.2; stroke-linejoin: round; }
+        .drawing__svg .recess { fill: var(--surface-2); stroke: var(--ink); stroke-width: 1.7; stroke-linejoin: round; }
+        .drawing__svg .edge { fill: none; stroke: var(--ink); stroke-width: 1.7; }
+        .drawing__svg .thin { fill: none; stroke: var(--ink-2); stroke-width: 1; }
+        .drawing__svg .hidden { fill: none; stroke: var(--ink-2); stroke-width: 1.2; stroke-dasharray: 5 3; }
+        .drawing__svg .cl { stroke: var(--ink-3); stroke-width: .9; stroke-dasharray: 16 3 2 3; }
+        .drawing__svg .ext { stroke: var(--accent-ink); stroke-width: .9; opacity: .7; }
+        .drawing__svg .dimln { stroke: var(--accent-ink); stroke-width: 1.1; }
+        .drawing__svg .arw { fill: var(--accent-ink); }
+        .drawing__svg .dl {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            font-weight: 700;
+            fill: var(--accent-ink);
+            paint-order: stroke;
+            stroke: var(--surface-2);
+            stroke-width: 4px;
+            stroke-linejoin: round;
+        }
+        .drawing__svg .dim { transition: opacity .2s; cursor: default; }
+        .drawing.has-hi .dim:not(.is-on) { opacity: .25; }
+        .drawing__svg .dim.is-on .dimln, .drawing__svg .dim.is-on .ext { stroke: var(--accent); stroke-width: 2; opacity: 1; }
+        .drawing__svg .dim.is-on .arw { fill: var(--accent); }
+        .drawing__svg .dim.is-on .dl { fill: var(--ink); }
+        table.data th.is-hi { background: var(--accent-soft); color: var(--accent-ink); }
+        .drawing__title {
+            position: absolute;
+            left: 12px;
+            top: 10px;
+            font-family: var(--font-ui);
+            font-weight: 900;
+            font-size: 12px;
+            color: var(--ink-3);
+            letter-spacing: .06em;
+        }
+        .type-meta { display: flex; gap: 8px; align-items: center; margin: 14px 2px 0; flex-wrap: wrap; }
+        .type-meta h3 { font-size: 18px; font-weight: 900; }
+
+        details.card > summary {
+            list-style: none;
+            cursor: pointer;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: var(--font-ui);
+            font-weight: 900;
+        }
+        details.card > summary::-webkit-details-marker { display: none; }
+        details.card > summary .chev { margin-left: auto; transition: transform .25s var(--ease); color: var(--ink-3); }
+        details.card[open] > summary .chev { transform: rotate(180deg); }
+        details.card > summary svg:first-child { color: var(--accent-ink); }
+        .tap-tables { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; padding: 0 20px 20px; }
+        @media (max-width: 760px) { .tap-tables { grid-template-columns: 1fr; } }
+        .tap-tables h3 { font-size: 13px; color: var(--ink-2); margin: 0 0 8px; }
+        .table-wrap { max-height: 420px; }
+    </style>
+</head>
+<body>
+    <header data-swb-header data-tool="screws"></header>
+
+    <main class="page">
+        <div class="page-head rise">
+            <div class="page-head__icon" data-icon="bolt"></div>
+            <div>
+                <h1>ネジ</h1>
+                <p>サイズを選ぶと、下穴・ばか穴・ざぐり・レンチ・ナットまで一気に。<span class="kbd">←</span><span class="kbd">→</span> で切り替え</p>
+            </div>
+        </div>
+
+        <div class="sizes rise" id="sizes" role="group" aria-label="ねじの呼び"></div>
+
+        <section class="card cheat rise" aria-labelledby="cheat-title">
+            <div class="card__head">
+                <h2 id="cheat-title"><span data-icon="sparkles"></span><span id="cheat-name">M3</span> 早見</h2>
+                <span class="spacer"></span>
+                <label class="comp small muted" title="3Dプリントで穴が小さく仕上がる分を、穴径に足して表示します">
+                    穴補正
+                    <span class="input-unit"><input class="input mono" id="comp" type="number" step="0.05" value="0" inputmode="decimal"><span>mm</span></span>
+                </label>
+            </div>
+            <div class="card__body">
+                <div class="stats" id="stats"></div>
+                <p class="small faint" id="cheat-note" style="margin-top:12px"></p>
+            </div>
+        </section>
+
+        <section class="card rise" style="margin-top:16px" aria-labelledby="types-title">
+            <div class="card__head">
+                <h2 id="types-title"><span data-icon="bolt"></span>種類別の寸法</h2>
+                <span class="hint">単位 mm ／ JIS 代表寸法</span>
+            </div>
+            <div class="card__body">
+                <div class="seg" id="types" role="tablist" aria-label="ねじの種類" style="margin-bottom:14px"></div>
+                <div class="types-grid">
+                    <div>
+                        <div class="drawing" role="img" id="drawing">
+                            <span class="drawing__title" id="drawing-title"></span>
+                            <div id="drawing-svg"></div>
+                        </div>
+                        <div class="type-meta">
+                            <h3 id="type-name"></h3>
+                            <span class="badge" id="type-en"></span>
+                        </div>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="data" id="dims"><thead></thead><tbody></tbody></table>
+                    </div>
+                </div>
+                <p class="small faint" style="margin-top:12px">※ JIS 規格等に基づく代表的な寸法例です。メーカーにより多少異なります。</p>
+            </div>
+        </section>
+
+        <details class="card rise" style="margin-top:16px" id="tap-card">
+            <summary><span data-icon="info"></span>タップ下穴 一覧（並目・細目）<svg class="i chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+            <div class="tap-tables">
+                <div>
+                    <h3>メートル並目ねじ</h3>
+                    <div class="table-wrap"><table class="data" id="tap-coarse"></table></div>
+                </div>
+                <div>
+                    <h3>メートル細目ねじ（下穴 = D − P）</h3>
+                    <div class="table-wrap"><table class="data" id="tap-fine"></table></div>
+                </div>
+            </div>
+            <div style="padding:0 20px 20px">
+                <div class="note"><span data-icon="info"></span><span>一般的な切削タップ用の下穴径です。転造（盛上げ）タップは下穴が大きくなるので、タップのメーカー推奨値を使ってください。</span></div>
+            </div>
+        </details>
+    </main>
+
+    <script>
+        (function () {
+            // ---- サイズ早見データ (mm) ----
+            //  tap: 切削タップ下穴 / clear: JIS B 1001 ボルト穴径 [1級, 2級, 3級]
+            //  cb: 六角穴付きボルト用ざぐり [径, 深さ] / keyCap・keyBtn: 六角レンチ二面幅
+            //  nut: 六角ナット二面幅 (M10/M12 は JIS旧規格 / ISO)
+            const SIZES = [
+                { d: 'M2', pitch: 0.4, tap: 1.6, clear: [2.2, 2.4, 2.6], cb: null, keyCap: 1.5, keyBtn: null, nut: '4' },
+                { d: 'M2.5', pitch: 0.45, tap: 2.05, clear: [2.7, 2.9, 3.1], cb: null, keyCap: 2, keyBtn: null, nut: '5' },
+                { d: 'M3', pitch: 0.5, tap: 2.5, clear: [3.2, 3.4, 3.6], cb: [6.5, 3.3], keyCap: 2.5, keyBtn: 2, nut: '5.5' },
+                { d: 'M4', pitch: 0.7, tap: 3.3, clear: [4.3, 4.5, 4.8], cb: [8, 4.4], keyCap: 3, keyBtn: 2.5, nut: '7' },
+                { d: 'M5', pitch: 0.8, tap: 4.2, clear: [5.3, 5.5, 5.8], cb: [9.5, 5.4], keyCap: 4, keyBtn: 3, nut: '8' },
+                { d: 'M6', pitch: 1.0, tap: 5.0, clear: [6.4, 6.6, 7.0], cb: [11, 6.5], keyCap: 5, keyBtn: 4, nut: '10' },
+                { d: 'M8', pitch: 1.25, tap: 6.8, clear: [8.4, 9.0, 10.0], cb: [14, 8.6], keyCap: 6, keyBtn: 5, nut: '13' },
+                { d: 'M10', pitch: 1.5, tap: 8.5, clear: [10.5, 11.0, 12.0], cb: [17.5, 10.8], keyCap: 8, keyBtn: 6, nut: '17', nutIso: '16' },
+                { d: 'M12', pitch: 1.75, tap: 10.2, clear: [13.0, 13.5, 14.5], cb: [20, 13], keyCap: 10, keyBtn: 8, nut: '19', nutIso: '18' }
+            ];
+
+            // ---- 種類別寸法 (旧サイトのデータを継承) ----
+            const TYPES = [
+                { id: 'button', name: 'ボタンボルト', en: 'Button Bolt',
+                    headers: [['d', 'ねじの呼び (d)'], ['D', '頭部径 (D)'], ['H', '頭部高さ (H)'], ['B', '二面幅 (B)']],
+                    rows: [
+                        { d: 'M3', D: 5.5, H: 2.0, B: 2.0 }, { d: 'M4', D: 7.5, H: 2.6, B: 2.5 }, { d: 'M5', D: 9.5, H: 3.4, B: 3.0 },
+                        { d: 'M6', D: 10.5, H: 4.0, B: 4.0 }, { d: 'M8', D: 14.0, H: 5.0, B: 5.0 }, { d: 'M10', D: 18.0, H: 6.0, B: 6.0 },
+                        { d: 'M12', D: 21.0, H: 7.0, B: 8.0 }, { d: 'M16', D: 28.0, H: 8.5, B: 10.0 }
+                    ] },
+                { id: 'cap', name: '六角穴付きボルト', en: 'Cap Bolt',
+                    headers: [['d', 'ねじの呼び (d)'], ['ds', '円筒部の径 (ds)'], ['dk', '頭部径 (dk)'], ['k', '頭部高さ (k)'], ['s', '二面幅 (S)'], ['l', '呼び長さ (l)']],
+                    rows: [
+                        { d: 'M2', ds: 2.00, dk: 3.80, k: 2.00, s: 1.5, l: '3–20' }, { d: 'M2.5', ds: 2.50, dk: 4.50, k: 2.50, s: 2.0, l: '4–25' },
+                        { d: 'M3', ds: 3.00, dk: 5.50, k: 3.00, s: 2.5, l: '5–30' }, { d: 'M4', ds: 4.00, dk: 7.00, k: 4.00, s: 3.0, l: '6–40' },
+                        { d: 'M5', ds: 5.00, dk: 8.50, k: 5.00, s: 4.0, l: '8–50' }, { d: 'M6', ds: 6.00, dk: 10.00, k: 6.00, s: 5.0, l: '10–60' },
+                        { d: 'M8', ds: 8.00, dk: 13.00, k: 8.00, s: 6.0, l: '12–80' }
+                    ] },
+                { id: 'truss', name: 'トラス小ねじ', en: 'Truss Head Screw',
+                    headers: [['d', 'ねじの呼び (d)'], ['dk', '頭部径 (dk)'], ['k', '頭部高さ (k)'], ['slot', '十字穴番号'], ['l', '呼び長さ (l)']],
+                    rows: [
+                        { d: 'M2', dk: 4.5, k: 1.2, slot: 1, l: '4–20' }, { d: 'M2.5', dk: 5.7, k: 1.5, slot: 1, l: '5–30' },
+                        { d: 'M3', dk: 6.9, k: 1.9, slot: 2, l: '5–40' }, { d: 'M4', dk: 9.4, k: 2.5, slot: 2, l: '6–50' },
+                        { d: 'M5', dk: 11.8, k: 3.1, slot: 2, l: '8–50' }, { d: 'M6', dk: 14.0, k: 3.7, slot: 3, l: '8–60' },
+                        { d: 'M8', dk: 17.8, k: 4.8, slot: 3, l: '10–60' }
+                    ] },
+                { id: 'pan', name: 'ナベ小ねじ', en: 'Pan Head Screw',
+                    headers: [['d', 'ねじの呼び (d)'], ['dk', '頭部径 (dk)'], ['k', '頭部高さ (k)'], ['slot', '十字穴番号'], ['l', '呼び長さ (l)']],
+                    rows: [
+                        { d: 'M2', dk: 3.5, k: 1.3, slot: 1, l: '4–20' }, { d: 'M2.3', dk: 4.0, k: 1.5, slot: 1, l: '4–20' },
+                        { d: 'M2.5', dk: 4.5, k: 1.7, slot: 1, l: '5–30' }, { d: 'M2.6', dk: 4.5, k: 1.7, slot: 1, l: '5–30' },
+                        { d: 'M3', dk: 5.5, k: 2.0, slot: 2, l: '5–40' }, { d: 'M4', dk: 7.0, k: 2.6, slot: 2, l: '6–50' },
+                        { d: 'M5', dk: 9.0, k: 3.3, slot: 2, l: '8–50' }, { d: 'M6', dk: 10.5, k: 3.9, slot: 3, l: '8–60' },
+                        { d: 'M8', dk: 14.0, k: 5.2, slot: 3, l: '10–60' }
+                    ] },
+                { id: 'nut', name: '六角ナット', en: 'Hex Nut',
+                    headers: [['d', 'ねじの呼び (d)'], ['s', '二面幅 (S)'], ['e', '対角距離 (e)'], ['m', 'ナット高さ (m)']],
+                    rows: [
+                        { d: 'M2', s: 4.0, e: 4.6, m: 1.6 }, { d: 'M2.3', s: 4.5, e: 5.2, m: 1.8 }, { d: 'M2.5', s: 5.0, e: 5.8, m: 2.0 },
+                        { d: 'M2.6', s: 5.0, e: 5.8, m: 2.0 }, { d: 'M3', s: 5.5, e: 6.4, m: 2.4 }, { d: 'M3.5', s: 6.0, e: 6.9, m: 2.8 },
+                        { d: 'M4', s: 7.0, e: 8.1, m: 3.2 }, { d: 'M5', s: 8.0, e: 9.2, m: 4.0 }, { d: 'M6', s: 10.0, e: 11.5, m: 5.0 },
+                        { d: 'M8', s: 13.0, e: 15.0, m: 6.5 }
+                    ] }
+            ];
+
+            // ---- タップ下穴 (並目: 旧サイトのデータ) ----
+            const TAP_COARSE = [
+                ['M1', 0.25, 0.75], ['M1.1', 0.25, 0.85], ['M1.2', 0.25, 0.95], ['M1.4', 0.3, 1.10], ['M1.6', 0.35, 1.25],
+                ['M1.8', 0.35, 1.45], ['M2', 0.4, 1.60], ['M2.2', 0.45, 1.75], ['M2.5', 0.45, 2.05], ['M3', 0.5, 2.50],
+                ['M3.5', 0.6, 2.90], ['M4', 0.7, 3.30], ['M4.5', 0.75, 3.70], ['M5', 0.8, 4.20], ['M6', 1.0, 5.00],
+                ['M7', 1.0, 6.00], ['M8', 1.25, 6.80], ['M9', 1.25, 7.80], ['M10', 1.5, 8.50], ['M11', 1.5, 9.50], ['M12', 1.75, 10.20]
+            ];
+            const TAP_FINE = [
+                ['M3', 0.35], ['M4', 0.5], ['M5', 0.5], ['M6', 0.75], ['M8', 1.0], ['M8', 0.75],
+                ['M10', 1.25], ['M10', 1.0], ['M10', 0.75], ['M12', 1.5], ['M12', 1.25], ['M12', 1.0]
+            ];
+
+            const $ = id => document.getElementById(id);
+            const saved = SWB.store.get('swb-screws', {});
+            const state = { size: saved.size || 'M3', type: saved.type || 'button', comp: saved.comp || 0 };
+            const qSize = (SWB.params.get('size') || '').toUpperCase();
+            if (SIZES.some(s => s.d === qSize)) state.size = qSize;
+            const qType = SWB.params.get('type');
+            if (TYPES.some(t => t.id === qType)) state.type = qType;
+            const save = () => SWB.store.set('swb-screws', state);
+
+            // サイズボタン
+            $('sizes').innerHTML = SIZES.map(s => '<button type="button" class="size-btn" data-size="' + s.d + '">' + s.d + '</button>').join('');
+            $('sizes').addEventListener('click', e => {
+                const b = e.target.closest('[data-size]');
+                if (b) setSize(b.dataset.size);
+            });
+            function setSize(d) {
+                state.size = d;
+                save();
+                history.replaceState(null, '', '?size=' + d + '&type=' + state.type);
+                renderCheat();
+                renderTable();
+            }
+
+            const compEl = $('comp');
+            compEl.value = state.comp;
+            compEl.addEventListener('input', () => {
+                const v = parseFloat(compEl.value);
+                state.comp = Number.isFinite(v) ? v : 0;
+                save();
+                renderCheat();
+            });
+
+            // 小数 1〜2 桁で表示 (8 → 8.0, 2.05 → 2.05)
+            const mm = v => { const t = String(Math.round(v * 100) / 100); return t.includes('.') ? t : t + '.0'; };
+            const hole = v => mm(Math.round((v + state.comp) * 1000) / 1000);
+
+            function stat(label, value, unit, sub, copy, cls) {
+                return '<button type="button" class="stat' + (cls ? ' ' + cls : '') + '" data-copy="' + SWB.escape(copy) + '" data-label="' + SWB.escape(label) + '">' +
+                    '<div class="stat__label">' + label + '</div>' +
+                    '<div class="stat__value">' + value + (unit ? '<small>' + unit + '</small>' : '') + '</div>' +
+                    (sub ? '<div class="stat__sub">' + sub + '</div>' : '') +
+                '</button>';
+            }
+
+            function renderCheat() {
+                $('sizes').querySelectorAll('[data-size]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.size === state.size)));
+                const s = SIZES.find(x => x.d === state.size);
+                const c = state.comp;
+                $('cheat-name').textContent = s.d;
+                const compNote = c ? '<span class="comp-on">補正 ' + (c > 0 ? '+' : '') + c + ' 込み</span>' : '';
+                const html = [
+                    stat('下穴（切削タップ）', 'φ' + hole(s.tap), 'mm', compNote || 'D − P', hole(s.tap), 'stat--hero'),
+                    stat('ピッチ（並目）', mm(s.pitch), 'mm', s.d + ' × ' + s.pitch, mm(s.pitch)),
+                    stat('ばか穴 2級（中）', 'φ' + hole(s.clear[1]), 'mm', '1級 ' + hole(s.clear[0]) + ' ／ 3級 ' + hole(s.clear[2]), hole(s.clear[1]), 'stat--accent'),
+                    s.cb
+                        ? stat('ざぐり（キャップボルト）', 'φ' + hole(s.cb[0]), 'mm', '深さ ' + mm(s.cb[1]) + ' mm', hole(s.cb[0]))
+                        : stat('ざぐり（キャップボルト）', '—', '', 'このサイズはデータなし', ''),
+                    stat('六角レンチ', mm(s.keyCap), 'mm', 'キャップ ' + mm(s.keyCap) + (s.keyBtn ? ' ／ ボタン ' + mm(s.keyBtn) : ''), mm(s.keyCap)),
+                    stat('ナット二面幅', s.nut, 'mm', s.nutIso ? 'JIS旧規格 ' + s.nut + ' ／ ISO ' + s.nutIso : '六角ナット', s.nut)
+                ].join('');
+                $('stats').innerHTML = html;
+                $('cheat-note').textContent = 'ばか穴は JIS B 1001（1級=精・2級=中・3級=粗）。ざぐりは六角穴付きボルト用の一般的な寸法。カードをタップで数値をコピー。';
+            }
+            $('stats').addEventListener('click', e => {
+                const b = e.target.closest('[data-copy]');
+                if (b && b.dataset.copy) SWB.copy(b.dataset.copy, b.dataset.label);
+            });
+
+            // 種類タブ
+            $('types').innerHTML = TYPES.map(t => '<button type="button" role="tab" data-type="' + t.id + '">' + t.name + '</button>').join('');
+            $('types').addEventListener('click', e => {
+                const b = e.target.closest('[data-type]');
+                if (!b) return;
+                state.type = b.dataset.type;
+                save();
+                history.replaceState(null, '', '?size=' + state.size + '&type=' + state.type);
+                renderTable();
+            });
+
+            function cell(t, key, v) {
+                if (v === undefined) return '';
+                if (typeof v !== 'number' || key === 'slot') return v;
+                return v.toFixed(t.id === 'cap' && key !== 's' ? 2 : 1); // キャップボルトは規格表どおり 2 桁
+            }
+
+            function renderTable() {
+                const t = TYPES.find(x => x.id === state.type);
+                $('types').querySelectorAll('[data-type]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.type === t.id)));
+                // 選んだサイズが表にあればその寸法で、なければいちばん近いサイズで作図
+                const want = parseFloat(state.size.slice(1));
+                const row = t.rows.find(r => r.d === state.size) ||
+                    t.rows.reduce((best, r) => (Math.abs(parseFloat(r.d.slice(1)) - want) < Math.abs(parseFloat(best.d.slice(1)) - want) ? r : best));
+                $('drawing-svg').innerHTML = SWB.screwDrawing(t.id, row);
+                SWB.screwDrawing.fit($('drawing-svg').firstChild);
+                $('drawing').setAttribute('aria-label', t.name + ' ' + row.d + ' の形状・寸法図');
+                $('drawing-title').textContent = row.d === state.size ? row.d + ' の寸法で作図' : row.d + ' で作図（' + state.size + ' はこの表にありません）';
+                $('type-name').textContent = t.name;
+                $('type-en').textContent = t.en;
+                const table = $('dims');
+                table.tHead.innerHTML = '<tr>' + t.headers.map(h => '<th data-key="' + h[0] + '">' + h[1] + '</th>').join('') + '</tr>';
+                table.tBodies[0].innerHTML = t.rows.map(r =>
+                    '<tr' + (r.d === state.size ? ' class="is-hit"' : '') + '>' + t.headers.map(h => '<td>' + cell(t, h[0], r[h[0]]) + '</td>').join('') + '</tr>'
+                ).join('');
+                // 表の中だけスクロールして該当サイズを見せる (ページ自体は動かさない)
+                const hit = table.querySelector('.is-hit');
+                const wrap = table.parentElement;
+                if (hit && wrap.scrollHeight > wrap.clientHeight) wrap.scrollTop = hit.offsetTop - wrap.clientHeight / 2;
+            }
+
+            // 表の見出しと図の寸法線を連動してハイライト
+            function highlight(key) {
+                const drawing = $('drawing');
+                drawing.classList.toggle('has-hi', !!key && !!drawing.querySelector('[data-dim="' + key + '"]'));
+                drawing.querySelectorAll('.dim').forEach(g => g.classList.toggle('is-on', g.dataset.dim === key));
+                $('dims').querySelectorAll('th').forEach(th => th.classList.toggle('is-hi', th.dataset.key === key));
+            }
+            $('dims').addEventListener('mouseover', e => { const th = e.target.closest('th[data-key]'); if (th) highlight(th.dataset.key); });
+            $('dims').addEventListener('mouseleave', () => highlight(null));
+            $('drawing').addEventListener('mouseover', e => { const g = e.target.closest('.dim'); highlight(g ? g.dataset.dim : null); });
+            $('drawing').addEventListener('mouseleave', () => highlight(null));
+
+            // タップ下穴テーブル
+            $('tap-coarse').innerHTML = '<thead><tr><th>呼び</th><th>ピッチ</th><th>下穴径</th></tr></thead><tbody>' +
+                TAP_COARSE.map(r => '<tr data-d="' + r[0] + '"><td>' + r[0] + '</td><td>' + r[1] + '</td><td>' + r[2].toFixed(2) + '</td></tr>').join('') + '</tbody>';
+            $('tap-fine').innerHTML = '<thead><tr><th>呼び</th><th>ピッチ</th><th>下穴径</th></tr></thead><tbody>' +
+                TAP_FINE.map(r => '<tr><td>' + r[0] + '×' + r[1] + '</td><td>' + r[1] + '</td><td>' + (parseFloat(r[0].slice(1)) - r[1]).toFixed(2) + '</td></tr>').join('') + '</tbody>';
+
+            // ← → でサイズ送り
+            document.addEventListener('keydown', e => {
+                if (SWB.isTyping(document.activeElement) || e.metaKey || e.ctrlKey || e.altKey) return;
+                if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+                const i = SIZES.findIndex(s => s.d === state.size);
+                const n = Math.max(0, Math.min(SIZES.length - 1, i + (e.key === 'ArrowRight' ? 1 : -1)));
+                if (n !== i) { e.preventDefault(); setSize(SIZES[n].d); }
+            });
+
+            renderCheat();
+            renderTable();
+        })();
+    </script>
+</body>
+</html>
