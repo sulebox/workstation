@@ -135,7 +135,7 @@
             padding: 16px max(16px, env(safe-area-inset-right)) max(22px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
         }
         .dock {
-            width: min(860px, 100%);
+            width: min(940px, 100%);
             border-radius: 30px;
             padding: 18px 20px 14px;
         }
@@ -146,7 +146,7 @@
 
         .tiles {
             display: grid;
-            grid-template-columns: repeat(7, 1fr);
+            grid-template-columns: repeat(8, 1fr);
             gap: 8px;
         }
         .tile {
@@ -249,7 +249,7 @@
         <section class="dock glass" aria-label="ツール">
             <div class="dock__head">
                 <p class="greet" id="greet">ようこそ</p>
-                <p class="dock__hint"><span class="kbd">1</span>〜<span class="kbd">7</span> でひらく</p>
+                <p class="dock__hint"><span class="kbd">1</span>〜<span class="kbd" id="key-max">8</span> でひらく</p>
             </div>
             <nav class="tiles" id="tiles"></nav>
         </section>
@@ -274,6 +274,7 @@
                 if (n >= 1 && n <= SWB.TOOLS.length) location.href = SWB.TOOLS[n - 1].href;
             });
 
+            document.getElementById('key-max').textContent = SWB.TOOLS.length;
             document.getElementById('open-palette').addEventListener('click', () => SWB.palette.open());
             if (!SWB.isMac) document.getElementById('palette-kbd').textContent = 'Ctrl K';
 

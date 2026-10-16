@@ -69,6 +69,8 @@
         code: '<path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/>',
         battery: '<rect width="16" height="10" x="2" y="7" rx="2"/><path d="M22 11v2"/><path d="M6 11v2"/>',
         led: '<path d="M8 10a4 4 0 0 1 8 0v6H8z"/><path d="M6 16h12"/><path d="M10 16v5"/><path d="M14 16v3"/><path d="m4 4 2 2"/><path d="m20 4-2 2"/><path d="M12 1.5v2"/>',
+        layers: '<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
+        external: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
         zap: '<path d="M13 2 4.5 13.5H12L11 22l8.5-11.5H12z"/>',
         palette: '<circle cx="13.5" cy="6.5" r=".6" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".6" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".6" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".6" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.65-.75 1.65-1.69 0-.44-.18-.84-.44-1.13-.29-.29-.44-.65-.44-1.13a1.64 1.64 0 0 1 1.67-1.67h2c3.05 0 5.55-2.5 5.55-5.55C21.97 6.01 17.46 2 12 2z"/>'
     };
@@ -85,7 +87,8 @@
         { id: 'calc', name: '電卓', en: 'Calc', href: 'calc.html', icon: 'calc', desc: '関数電卓・履歴・キーボード操作', keys: 'calc dentaku calculator 電卓 けいさん' },
         { id: 'translate', name: '翻訳', en: 'Translate', href: 'translate.html', icon: 'languages', desc: 'Claude Haiku 5.5', keys: 'translate honyaku 翻訳 english 英語' },
         { id: 'servo', name: 'サーボ', en: 'Servo', href: 'servo.html', icon: 'servo', desc: 'PCA9685 PWM・KRS ICS', keys: 'servo pwm pca9685 krs ics サーボ パルス' },
-        { id: 'circuit', name: '回路', en: 'Circuit', href: 'circuit.html', icon: 'resistor', desc: '分圧・LED抵抗・カラーコード', keys: 'circuit resistor led ohm 抵抗 分圧 カラーコード オーム 回路 電子' }
+        { id: 'circuit', name: '回路', en: 'Circuit', href: 'circuit.html', icon: 'resistor', desc: '分圧・LED抵抗・カラーコード', keys: 'circuit resistor led ohm 抵抗 分圧 カラーコード オーム 回路 電子' },
+        { id: 'sheet', name: '板厚', en: 'Sheet', href: 'sheet.html', icon: 'layers', desc: 'SendCutSend の材質と板厚', keys: 'sheet sendcutsend scs 板厚 板金 レーザー インチ inch アルミ アクリル カーボン' }
     ];
 
     /* ---------- prefs: theme & day/night ---------- */
@@ -208,7 +211,7 @@
     function mountHeader(el) {
         const current = el.dataset.tool;
         const nav = SWB.TOOLS.map(t =>
-            '<a href="' + t.href + '"' + (t.id === current ? ' aria-current="page"' : '') + '>' + SWB.icon(t.icon) + '<span>' + t.name + '</span></a>'
+            '<a href="' + t.href + '" title="' + t.name + '"' + (t.id === current ? ' aria-current="page"' : '') + '>' + SWB.icon(t.icon) + '<span>' + t.name + '</span></a>'
         ).join('');
         el.classList.add('swb-header');
         el.innerHTML =
@@ -331,6 +334,10 @@
                 const d = f[1] || f[4];
                 const fit = f[2] + '/' + f[3];
                 out.push({ icon: 'fit', title: (d ? 'φ' + d + ' ' : '') + fit + ' のはめあい', sub: 'ISO 286 で計算', run: () => go('fits.html?fit=' + encodeURIComponent(fit) + (d ? '&d=' + d : '')) });
+            }
+            const th = q.normalize('NFKC').match(/^(\d*\.?\d+|\d+\/\d+)\s*(mm|in|inch|"|″)\s*(板|板厚)?$/i);
+            if (th) {
+                out.push({ icon: 'layers', title: th[1] + th[2] + ' の板を探す', sub: 'SendCutSend の材質と板厚', run: () => go('sheet.html?t=' + encodeURIComponent(th[1] + th[2])) });
             }
             if (q.length > 1 && /^(t|tr|翻訳)\s+/i.test(q)) {
                 const text = q.replace(/^(t|tr|翻訳)\s+/i, '');

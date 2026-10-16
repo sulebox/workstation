@@ -304,6 +304,10 @@ html[data-mode="night"] .tool-nav a[aria-current="page"] { background: var(--acc
 .swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--sw); }
 .swatch[aria-pressed="true"]::after { box-shadow: 0 0 10px 2px var(--sw); }
 
+@media (min-width: 861px) and (max-width: 1260px) {
+    .tool-nav a:not([aria-current="page"]) span { display: none; }
+    .tool-nav a:not([aria-current="page"]) { padding: 7px 10px; }
+}
 @media (max-width: 860px) {
     .swb-header__inner { grid-template-columns: 1fr auto; row-gap: 8px; padding: 10px 16px 8px; }
     .tool-nav { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; margin: 0 -16px; padding: 0 12px; }
@@ -559,6 +563,7 @@ html[data-mode="night"] .seg button[aria-selected="true"] { background: var(--ac
     box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .22);
     transition: transform .15s var(--ease), filter .2s, box-shadow .2s;
     white-space: nowrap;
+    text-decoration: none;
 }
 .btn svg { color: var(--accent); }
 .btn:hover { filter: brightness(1.12); }

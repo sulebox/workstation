@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>板厚 — SULE WORKSTATION BOX</title>
+    <meta name="theme-color" content="#3B2420">
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+    <link rel="stylesheet" href="assets/css/app.css">
+    <script src="assets/js/core.js"></script>
+    <script src="assets/js/expr.js" defer></script>
+    <script src="assets/js/scs-data.js"></script>
+    <style>
+        .finder .row { gap: 8px; }
+        .finder__summary { margin-top: 10px; font-size: 13px; color: var(--ink-2); min-height: 1.6em; }
+        .finder__summary b { font-family: var(--font-mono); color: var(--accent-ink); }
+        .targets { margin-top: 12px; }
+        .targets .chip { font-family: var(--font-mono); }
+
+        .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 18px 0 12px; }
+        .controls .seg button { padding: 6px 11px; font-size: 13px; }
+
+        .mats { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); align-items: start; }
+        .mat { padding: 14px 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+        .mat__head { display: flex; align-items: flex-start; gap: 8px; }
+        .mat__title { flex: 1; min-width: 0; }
+        .mat__title h3 { font-size: 16px; font-weight: 900; }
+        .mat__title small { display: block; font-size: 11.5px; color: var(--ink-3); margin-top: 1px; }
+        .star {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            border: 0;
+            background: transparent;
+            color: var(--ink-3);
+            display: grid;
+            place-items: center;
+            flex: none;
+            transition: color .2s, transform .2s var(--spring);
+        }
+        .star svg { width: 18px; height: 18px; }
+        .star:hover { color: var(--ink); transform: scale(1.1); }
+        .star[aria-pressed="true"] { color: var(--accent-ink); }
+        .star[aria-pressed="true"] svg { fill: currentColor; }
+        .mat__link { width: 32px; height: 32px; border-radius: 10px; }
+        .mat__link svg { width: 15px; height: 15px; }
+        .procs { display: flex; gap: 4px; flex-wrap: wrap; }
+        .pbadge { font-family: var(--font-ui); font-weight: 700; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); }
+
+        .tks { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
+        .tk {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1px;
+            padding: 8px 10px;
+            border-radius: 12px;
+            border: 1.5px solid var(--line);
+            background: var(--surface-2);
+            color: var(--ink);
+            text-align: left;
+            cursor: copy;
+            transition: border-color .2s, background-color .2s, transform .15s, opacity .2s;
+        }
+        .tk:hover { border-color: var(--accent); }
+        .tk:active { transform: scale(.97); }
+        .tk b { font-family: var(--font-mono); font-size: 17px; font-weight: 700; line-height: 1.2; letter-spacing: -.01em; }
+        .tk b small { font-size: 11px; font-weight: 500; color: var(--ink-3); margin-left: 2px; }
+        .tk > span { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-3); white-space: nowrap; }
+        .tk i { font-style: normal; color: var(--accent-ink); }
+        .tk .frac { position: absolute; top: 7px; right: 8px; font-family: var(--font-mono); font-size: 11px; font-weight: 700; }
+        .tk em { font-style: normal; font-family: var(--font-ui); font-weight: 900; font-size: 9.5px; color: var(--ink-3); }
+        .tk.is-hit { background: var(--choco); border-color: var(--choco); color: var(--on-choco); }
+        .tk.is-hit b { color: var(--accent); }
+        .tk.is-hit b small, .tk.is-hit > span, .tk.is-hit em { color: color-mix(in srgb, var(--on-choco) 60%, transparent); }
+        .tk.is-hit i { color: var(--accent); }
+        html[data-mode="night"] .tk.is-hit { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
+        html[data-mode="night"] .tk.is-hit > span, html[data-mode="night"] .tk.is-hit em { color: var(--ink-2); }
+        .searching .tk:not(.is-hit) { opacity: .45; }
+        .diff { font-family: var(--font-mono); font-size: 11px; font-weight: 700; margin-left: auto; color: var(--accent-ink); white-space: nowrap; }
+
+        .empty { padding: 30px; text-align: center; color: var(--ink-3); }
+    </style>
+</head>
+<body>
+    <header data-swb-header data-tool="sheet"></header>
+
+    <main class="page">
+        <div class="page-head rise">
+            <div class="page-head__icon" data-icon="layers"></div>
+            <div>
+                <h1>板厚</h1>
+                <p>SendCutSend の材質と板厚を、インチ ⇄ mm で</p>
+            </div>
+            <div class="page-head__aside">
+                <a class="btn btn--ghost btn--sm" href="https://sendcutsend.com/materials/" target="_blank" rel="noopener">SendCutSend<span data-icon="external"></span></a>
+            </div>
+        </div>
+
+        <section class="card finder rise" aria-labelledby="find-title">
+            <div class="card__head"><h2 id="find-title"><span data-icon="search"></span>厚みや材料名で探す</h2></div>
+            <div class="card__body">
+                <input class="input input--xl" id="q" type="search" autocomplete="off" spellcheck="false" placeholder=".125 ・ 1/8 ・ 3mm ・ アクリル" aria-describedby="summary">
+                <p class="finder__summary" id="summary" aria-live="polite"></p>
+                <div class="chips targets" id="targets" aria-label="よく使う厚み"></div>
+            </div>
+        </section>
+
+        <div class="controls rise">
+            <div class="seg" id="cats" role="group" aria-label="カテゴリ"></div>
+            <button type="button" class="chip" id="fav-only" aria-pressed="false"><span data-icon="star"></span>お気に入り</button>
+            <span class="spacer"></span>
+            <span class="label">大きく表示</span>
+            <div class="seg" id="unit" role="group" aria-label="大きく表示する単位">
+                <button type="button" data-unit="mm">mm</button>
+                <button type="button" data-unit="in">inch</button>
+            </div>
+        </div>
+
+        <div class="mats" id="mats"></div>
+
+        <p class="small faint" style="margin-top:20px" id="source-note"></p>
+    </main>
+
+    <script>
+        (function () {
+            const SCS = SWB.scs;
+            const $ = id => document.getElementById(id);
+            const saved = SWB.store.get('swb-sheet', {});
+            const state = {
+                cat: saved.cat || 'all',
+                unit: saved.v === 2 && saved.unit === 'mm' ? 'mm' : 'in',
+                favs: Array.isArray(saved.favs) ? saved.favs : [],
+                favOnly: !!saved.favOnly,
+                q: ''
+            };
+            const save = () => SWB.store.set('swb-sheet', { v: 2, cat: state.cat, unit: state.unit, favs: state.favs, favOnly: state.favOnly });
+            const q0 = SWB.params.get('t') || SWB.params.get('q');
+            if (q0) state.q = q0;
+
+            const mm3 = SCS.mm3;
+            const inchLabel = t => t.label + '″';
+            const inchText = inch => (inch < 1 ? inch.toFixed(3).replace(/^0/, '') : inch.toFixed(3)) + '″';
+
+            /* ---------- 入力の解釈: 厚み (mm / inch / 分数) か、材料名か ---------- */
+            function parseThickness(input) {
+                const s = String(input).normalize('NFKC').trim().toLowerCase().replace(/\s+/g, ' ');
+                if (!s) return null;
+                const INCH = '(?:in|inch|inches|"|″|インチ)';
+                let m;
+                if ((m = new RegExp('^(\\d+)[ -](\\d+)/(\\d+) ?' + INCH + '?$').exec(s))) return fromInch(+m[1] + m[2] / m[3]);
+                if ((m = new RegExp('^(\\d+)/(\\d+) ?' + INCH + '?$').exec(s))) return fromInch(m[1] / m[2]);
+                if ((m = /^(\d*\.?\d+) ?(mm|ミリ)$/.exec(s))) return fromMm(+m[1]);
+                if ((m = new RegExp('^(\\d*\\.?\\d+) ?' + INCH + '$').exec(s))) return fromInch(+m[1]);
+                // 単位なし: 1 未満はインチ (.125 / 0.063)、1〜60 は mm (3 → 3mm)
+                if ((m = /^(\d*\.?\d+)$/.exec(s)) && +m[1] > 0 && +m[1] < 1) return fromInch(+m[1]);
+                if ((m = /^(\d*\.?\d+)$/.exec(s)) && +m[1] >= 1 && +m[1] <= 60) return fromMm(+m[1]);
+                return null;
+            }
+            const fromMm = mm => (mm > 0 ? { mm, inch: mm / 25.4 } : null);
+            const fromInch = inch => (inch > 0 ? { mm: inch * 25.4, inch } : null);
+
+            /* ---------- UI 部品 ---------- */
+            const TARGETS = ['.030', '.040', '.063', '.080', '.090', '.100', '.118', '.125', '.187', '.250', '.313', '.375', '.500'];
+            $('targets').innerHTML = TARGETS.map(v => {
+                const frac = SCS.fraction(parseFloat(v));
+                return '<button type="button" class="chip" data-t="' + v + '">' + v + '″' + (frac ? ' <small>' + frac + '</small>' : '') + '</button>';
+            }).join('');
+            $('targets').addEventListener('click', e => {
+                const b = e.target.closest('[data-t]');
+                if (!b) return;
+                $('q').value = state.q === b.dataset.t ? '' : b.dataset.t;
+                onQuery();
+            });
+
+            $('cats').innerHTML = '<button type="button" data-cat="all">すべて</button>' + SCS.categories.map(c => '<button type="button" data-cat="' + c.id + '">' + c.name + '</button>').join('');
+            $('cats').addEventListener('click', e => {
+                const b = e.target.closest('[data-cat]');
+                if (!b) return;
+                state.cat = b.dataset.cat;
+                save();
+                render();
+            });
+            $('unit').addEventListener('click', e => {
+                const b = e.target.closest('[data-unit]');
+                if (!b) return;
+                state.unit = b.dataset.unit;
+                save();
+                render();
+            });
+            $('fav-only').addEventListener('click', () => {
+                state.favOnly = !state.favOnly;
+                save();
+                render();
+            });
+
+            const qEl = $('q');
+            qEl.value = state.q;
+            qEl.addEventListener('input', onQuery);
+            function onQuery() {
+                state.q = qEl.value;
+                const t = parseThickness(state.q);
+                const url = state.q.trim() ? '?' + (t ? 't=' : 'q=') + encodeURIComponent(state.q.trim()) : location.pathname;
+                history.replaceState(null, '', url);
+                render();
+            }
+
+            /* ---------- 描画 ---------- */
+            function render() {
+                $('cats').querySelectorAll('[data-cat]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.cat === state.cat)));
+                $('unit').querySelectorAll('[data-unit]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.unit === state.unit)));
+                $('fav-only').setAttribute('aria-pressed', String(state.favOnly));
+                $('targets').querySelectorAll('[data-t]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.t === state.q.trim())));
+
+                const target = parseThickness(state.q);
+                const nameQ = !target && state.q.trim() ? state.q.normalize('NFKC').trim().toLowerCase() : '';
+                const tol = target ? Math.max(0.2, target.mm * 0.1) : 0;
+
+                let list = SCS.materials
+                    .filter(m => state.cat === 'all' || m.cat === state.cat)
+                    .filter(m => !state.favOnly || state.favs.includes(m.id))
+                    .filter(m => !nameQ || (m.name + ' ' + m.en + ' ' + m.id).toLowerCase().includes(nameQ))
+                    .map(m => {
+                        const tks = SCS.thicknesses(m);
+                        let best = Infinity;
+                        tks.forEach(t => {
+                            t.diff = target ? t.mm - target.mm : 0;
+                            t.hit = !!target && Math.abs(t.diff) <= tol;
+                            if (t.hit) best = Math.min(best, Math.abs(t.diff));
+                        });
+                        return { m, tks, best };
+                    });
+
+                // 厚みで探しているときは、近い板を持つ材料だけを近い順に
+                let nearest = null;
+                if (target) {
+                    list.forEach(x => x.tks.forEach(t => { if (!nearest || Math.abs(t.diff) < Math.abs(nearest.t.diff)) nearest = { m: x.m, t }; }));
+                    list = list.filter(x => x.best < Infinity).sort((a, b) => a.best - b.best);
+                }
+
+                const summary = $('summary');
+                if (target) {
+                    summary.innerHTML = '<b>' + inchText(target.inch) + '</b>' +
+                        (SCS.fraction(target.inch) ? '（' + SCS.fraction(target.inch) + '″）' : '') + ' = <b>' + mm3(target.mm) + ' mm</b> に近い板：' +
+                        (list.length ? list.length + ' 材料（±' + inchText(tol / 25.4) + ' 以内）' : 'なし');
+                } else if (nameQ) {
+                    summary.textContent = '「' + state.q.trim() + '」で絞り込み：' + list.length + ' 材料';
+                } else {
+                    summary.textContent = 'インチ・分数・mm どれでも（単位なしは 1 未満ならインチ、1 以上なら mm）。材料名でも絞り込めます';
+                }
+
+                const mats = $('mats');
+                mats.classList.toggle('searching', !!target);
+                if (!list.length) {
+                    let msg = state.favOnly && !state.favs.length ? '★ を押した材料がここに出ます' : '見つかりませんでした';
+                    if (target && nearest) msg += '。いちばん近いのは ' + nearest.m.name + ' の ' + inchLabel(nearest.t) + '（' + mm3(nearest.t.mm) + ' mm）です';
+                    mats.innerHTML = '<div class="card empty" style="grid-column:1/-1"></div>';
+                    mats.firstChild.textContent = msg;
+                    return;
+                }
+                mats.innerHTML = list.map(cardHTML).join('');
+            }
+
+            function cardHTML(x) {
+                const m = x.m;
+                const fav = state.favs.includes(m.id);
+                const procs = [...new Set(x.tks.map(t => t.proc))].map(p => '<span class="pbadge">' + SCS.processes[p] + '</span>').join('');
+                const bestHit = x.tks.filter(t => t.hit).sort((a, b) => Math.abs(a.diff) - Math.abs(b.diff))[0];
+                const d = bestHit && Math.abs(bestHit.diff);
+                const diffText = !bestHit ? '' : d < 0.005 ? 'ぴったり'
+                    : (bestHit.diff > 0 ? '+' : '−') + (state.unit === 'in' ? (d / 25.4).toFixed(3).replace(/^0/, '') + '″' : d.toFixed(2) + ' mm');
+                const diffTag = bestHit ? '<span class="diff">' + diffText + '</span>' : '';
+                return '<article class="card mat" data-id="' + m.id + '">' +
+                    '<div class="mat__head">' +
+                        '<button type="button" class="star" data-star="' + m.id + '" aria-pressed="' + fav + '" aria-label="' + SWB.escape(m.name) + ' をお気に入り">' + SWB.icon('star') + '</button>' +
+                        '<div class="mat__title"><h3>' + SWB.escape(m.name) + '</h3><small>' + SWB.escape(m.en) + '</small></div>' +
+                        '<a class="icon-btn mat__link" href="' + SCS.url(m) + '" target="_blank" rel="noopener" title="SendCutSend の材質ページ" aria-label="' + SWB.escape(m.name) + ' を SendCutSend で見る">' + SWB.icon('external') + '</a>' +
+                    '</div>' +
+                    '<div class="procs">' + procs + diffTag + '</div>' +
+                    '<div class="tks">' + x.tks.map(t => chipHTML(m, t, x.tks)).join('') + '</div>' +
+                '</article>';
+            }
+
+            function chipHTML(m, t, all) {
+                const frac = SCS.fraction(t.inch);
+                const mixed = new Set(all.map(a => a.proc)).size > 1;
+                // インチ表示: 分数は右上に / mm 表示: 分数は下段のインチの横に
+                const big = state.unit === 'mm'
+                    ? mm3(t.mm) + '<small>mm</small>'
+                    : t.label + '<small>″</small>';
+                const sub = state.unit === 'mm'
+                    ? inchLabel(t) + (frac ? ' <i>' + frac + '</i>' : '')
+                    : mm3(t.mm) + ' mm';
+                const fracTag = state.unit === 'in' && frac ? '<i class="frac">' + frac + '</i>' : '';
+                // コピーは CAD にそのまま入れられる mm
+                return '<button type="button" class="tk' + (t.hit ? ' is-hit' : '') + '" data-copy="' + mm3(t.mm) + '" data-name="' + SWB.escape(m.name) + ' ' + inchLabel(t) + ' = ' + mm3(t.mm) + ' mm" title="クリックで ' + mm3(t.mm) + ' をコピー">' +
+                    '<b>' + big + '</b>' + fracTag + '<span>' + sub + '</span>' +
+                    (mixed ? '<em>' + (t.proc === 'cnc' ? 'CNC' : t.proc === 'laser' ? 'レーザー' : 'WJ') + '</em>' : '') +
+                '</button>';
+            }
+
+            $('mats').addEventListener('click', e => {
+                const star = e.target.closest('[data-star]');
+                if (star) {
+                    const id = star.dataset.star;
+                    state.favs = state.favs.includes(id) ? state.favs.filter(x => x !== id) : state.favs.concat(id);
+                    save();
+                    if (state.favOnly) render();
+                    else star.setAttribute('aria-pressed', String(state.favs.includes(id)));
+                    return;
+                }
+                const tk = e.target.closest('[data-copy]');
+                if (tk) SWB.copy(tk.dataset.copy, tk.dataset.name);
+            });
+
+            $('source-note').innerHTML = 'SendCutSend 公式サイトの板厚（' + SCS.updated + '時点）を、インチ × 25.4 で mm に換算しています。曲げ・タップなどの加工の可否や最新のラインナップは、各材質ページ（' + SWB.icon('external') + '）で確認してください。';
+
+            render();
+        })();
+    </script>
+</body>
+</html>
